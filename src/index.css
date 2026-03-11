@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Barras de rolagem personalizadas (tema escuro) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(113 113 122) rgb(39 39 42);
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgb(39 39 42);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgb(113 113 122);
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgb(161 161 170);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: rgb(163 163 163);
+}
+
+*::-webkit-scrollbar-corner {
+  background: rgb(39 39 42);
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: none;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+
+/* Select do modo de compra no header: seta customizada para não ser cortada */
+.header-buy-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+  padding-right: 32px;
+}
+
+/* Botão Comprar: verde quando pode comprar, cinza quando não (evita conflito com Tailwind condicional) */
+.buy-card--affordable {
+  background-color: rgb(22 163 74);
+}
+.buy-card--affordable:hover {
+  background-color: rgb(34 197 94);
+}
+.buy-card--unaffordable {
+  background-color: rgb(82 82 82);
+}
+
+/* Animação de clique: o card encolhe quando o botão interno está :active */
+.buy-card-clickable:has(button:active) {
+  transform: scale(0.97);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+}

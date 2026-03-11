@@ -1,0 +1,117 @@
+import { useEffect } from "react";
+import Decimal from "break_eternity.js";
+import type { GameState } from "@/store/gameState";
+import { getInitialState } from "@/store/gameState";
+import { useGameState } from "@/store/useGameStore";
+import { advanceMilestoneTargetIndex } from "@/utils/milestones";
+
+const SAVE_KEY = "idle-game-save";
+const SAVE_VERSION = 5;
+
+interface SavedState {
+  version: number;
+  baseResource: string;
+  ticketCurrency?: string;
+  ticketAccumulator?: number;
+  milestoneCurrency?: string;
+  upgradeTicketRateRank?: number;
+  generators: {
+    id: string;
+    quantity: string;
+    cycleProgress: number;
+    cycleStartTime: number;
+    claimedMilestoneIndex?: number;
+    currentMilestoneTargetIndex?: number;
+    upgradeCycleSpeedRank?: number;
+    upgradeProductionRank?: number;
+  }[];
+  lastUpdateTimestamp: number;
+}
+
+function serialize(state: GameState): string {
+  const saved: SavedState = {
+    version: SAVE_VERSION,
+    baseResource: state.baseResource.toString(),
+    ticketCurrency: state.ticketCurrency.toString(),
+    ticketAccumulator: state.ticketAccumulator,
+    milestoneCurrency: state.milestoneCurrency.toString(),
+    upgradeTicketRateRank: state.upgradeTicketRateRank,
+    generators: state.generators.map((g) => ({
+      id: g.id,
+      quantity: g.quantity.toString(),
+      cycleProgress: g.cycleProgress,
+      cycleStartTime: g.cycleStartTime,
+      claimedMilestoneIndex: g.claimedMilestoneIndex,
+      currentMilestoneTargetIndex: g.currentMilestoneTargetIndex,
+      upgradeCycleSpeedRank: g.upgradeCycleSpeedRank,
+      upgradeProductionRank: g.upgradeProductionRank,
+    })),
+    lastUpdateTimestamp: state.lastUpdateTimestamp,
+  };
+  return JSON.stringify(saved);
+}
+
+function deserialize(raw: string): GameState | null {
+  try {
+    const saved = JSON.parse(raw) as SavedState;
+    if (saved.version !== SAVE_VERSION && saved.version !== 1 && saved.version !== 2 && saved.version !== 3 && saved.version !== 4) return null;
+    const initial = getInitialState();
+    const now = Date.now();
+    const byId = new Map(
+      saved.generators?.map((g) => [
+        g.id,
+        {
+          id: g.id as GameState["generators"][0]["id"],
+          quantity: Decimal.fromString(g.quantity),
+          cycleProgress: Number(g.cycleProgress) || 0,
+          cycleStartTime: Number(g.cycleStartTime) || now,
+          claimedMilestoneIndex: Number(g.claimedMilestoneIndex) || 0,
+          currentMilestoneTargetIndex: Number(g.currentMilestoneTargetIndex) || 0,
+          upgradeCycleSpeedRank: Number((g as SavedState["generators"][0]).upgradeCycleSpeedRank) || 0,
+          upgradeProductionRank: Number((g as SavedState["generators"][0]).upgradeProductionRank) || 0,
+        },
+      ]) ?? []
+    );
+    const generators = initial.generators.map((g) => {
+      const loaded = byId.get(g.id);
+      if (!loaded) return g;
+      const claimed = loaded.claimedMilestoneIndex ?? 0;
+      const rawTarget = loaded.currentMilestoneTargetIndex;
+      const currentMilestoneTargetIndex =
+        rawTarget != null && rawTarget >= 1
+          ? rawTarget
+          : advanceMilestoneTargetIndex(loaded.quantity, 1);
+      const upgCycle = (loaded as { upgradeCycleSpeedRank?: number }).upgradeCycleSpeedRank ?? 0;
+      const upgProd = (loaded as { upgradeProductionRank?: number }).upgradeProductionRank ?? 0;
+      return { ...g, ...loaded, claimedMilestoneIndex: claimed, currentMilestoneTargetIndex, upgradeCycleSpeedRank: upgCycle, upgradeProductionRank: upgProd };
+    });
+    return {
+      baseResource: Decimal.fromString(saved.baseResource ?? "0"),
+      ticketCurrency: Decimal.fromString(saved.ticketCurrency ?? "0"),
+      ticketAccumulator: Number(saved.ticketAccumulator) || 0,
+      milestoneCurrency: Decimal.fromString(saved.milestoneCurrency ?? "0"),
+      upgradeTicketRateRank: Number(saved.upgradeTicketRateRank) || 0,
+      generators,
+      lastUpdateTimestamp: saved.lastUpdateTimestamp ?? Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function loadGameState(): GameState | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    return deserialize(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function usePersist() {
+  const state = useGameState();
+  useEffect(() => {
+    localStorage.setItem(SAVE_KEY, serialize(state));
+  }, [state]);
+}

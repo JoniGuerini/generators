@@ -1,8 +1,6 @@
 import { useState } from "react";
-import Decimal from "break_eternity.js";
 import { useGameState, useGameDispatch } from "@/store/useGameStore";
 import { GENERATOR_DEFS } from "@/engine/constants";
-import type { GeneratorId } from "@/engine/constants";
 import {
   getEffectiveCycleTimeSeconds,
   getMaxCycleSpeedRank,

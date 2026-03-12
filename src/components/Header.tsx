@@ -12,7 +12,7 @@ export function Header() {
   const [showUpgrades, setShowUpgrades] = useState(false);
   return (
     <>
-      <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-zinc-700/80 bg-zinc-800 px-4 py-3 shadow">
+      <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-zinc-700/80 bg-zinc-800 px-2 py-2 shadow">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-cyan-400" aria-hidden>

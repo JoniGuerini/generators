@@ -3,7 +3,7 @@ import { GeneratorRow } from "./GeneratorRow";
 
 export function GeneratorList() {
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="flex min-w-0 flex-col gap-3">
       {GENERATOR_IDS.map((id) => (
         <li key={id}>
           <GeneratorRow id={id} />

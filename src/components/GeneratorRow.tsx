@@ -1,3 +1,4 @@
+import { useRef, useState, useCallback } from "react";
 import Decimal from "break_eternity.js";
 import { useGameState, useGameDispatch } from "@/store/useGameStore";
 import { useBuyMode } from "@/contexts/BuyModeContext";
@@ -24,12 +25,18 @@ function getBuyAmount(mode: BuyMode, maxAffordable: Decimal): number {
   const toBuyDecimal = maxAffordable.mul(pct).floor();
   const n = toBuyDecimal.toNumber();
   if (!Number.isFinite(n) || n < 0) return 0;
-  return Math.min(n, Number.MAX_SAFE_INTEGER);
+  const amount = Math.min(n, Number.MAX_SAFE_INTEGER);
+  // Em modos %, se o cálculo deu 0 mas dá pra comprar pelo menos 1, comprar 1
+  if (amount === 0 && Decimal.gte(maxAffordable, Decimal.dOne)) return 1;
+  return amount;
 }
 
 interface GeneratorRowProps {
   id: GeneratorId;
 }
+
+const TOOLTIP_ESTIMATED_WIDTH = 180;
+const TOOLTIP_GAP = 6;
 
 export function GeneratorRow({ id }: GeneratorRowProps) {
   const state = useGameState();
@@ -37,6 +44,19 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
   const { buyMode } = useBuyMode();
   const def = GENERATOR_DEFS[id];
   const gen = state.generators.find((g) => g.id === id);
+  const milestoneTriggerRef = useRef<HTMLDivElement>(null);
+  const buyTriggerRef = useRef<HTMLDivElement>(null);
+  const [milestoneTooltipSide, setMilestoneTooltipSide] = useState<"left" | "right">("right");
+  const [buyTooltipSide, setBuyTooltipSide] = useState<"left" | "right">("right");
+
+  const updateTooltipSide = useCallback((ref: React.RefObject<HTMLDivElement | null>, setSide: (s: "left" | "right") => void) => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const spaceRight = typeof window !== "undefined" ? window.innerWidth - (rect.right + TOOLTIP_GAP) : TOOLTIP_ESTIMATED_WIDTH;
+    setSide(spaceRight >= TOOLTIP_ESTIMATED_WIDTH ? "right" : "left");
+  }, []);
+
   if (!gen) return null;
 
   const quantity = gen.quantity;
@@ -112,7 +132,7 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
   const canClaim = pendingMilestones > 0;
 
   return (
-    <div className="flex h-[40px] flex-nowrap items-center gap-2">
+    <div className="flex h-[40px] min-w-0 flex-nowrap items-center gap-2">
       {/* Card do número do gerador — 40px (fundo vermelho, número em branco) */}
       <div
         className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-md bg-red-600 text-sm font-bold text-white"
@@ -122,14 +142,23 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
       </div>
 
       {/* Barra de progresso para próximo marco (10, 100, 1k…) — clicável para resgatar */}
-      <div className="group relative h-[40px] w-[72px] shrink-0 overflow-visible rounded-md">
-        {/* Tooltip customizado (estilo do jogo) — aparece abaixo do card */}
+      <div
+        ref={milestoneTriggerRef}
+        onMouseEnter={() => updateTooltipSide(milestoneTriggerRef, setMilestoneTooltipSide)}
+        className="group relative h-[40px] w-[72px] shrink-0 overflow-visible rounded-md"
+      >
+        {/* Tooltip ao lado do card (direita ou esquerda conforme espaço) */}
         <div
-          className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 min-w-[160px] -translate-x-1/2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 shadow-xl opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+          className={`pointer-events-none absolute top-1/2 z-20 min-w-[160px] -translate-y-1/2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 shadow-xl opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${
+            milestoneTooltipSide === "right" ? "left-full ml-1.5" : "right-full mr-1.5"
+          }`}
           role="tooltip"
         >
-          {/* Seta do tooltip para cima (apontando para o card) */}
-          <div className="absolute bottom-full left-1/2 h-0 w-0 -translate-x-1/2 border-4 border-transparent border-b-zinc-800" />
+          {milestoneTooltipSide === "right" ? (
+            <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-r-zinc-800" />
+          ) : (
+            <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-l-zinc-800" />
+          )}
           <div className="flex flex-col gap-1.5 text-left">
             <div className="flex items-center justify-between gap-4 whitespace-nowrap">
               <span className="text-xs text-zinc-400">Quantidade atual</span>
@@ -222,14 +251,22 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
 
       {/* Card Comprar: tooltip de custo quando sem recurso; botão em absolute inset-0. */}
       <div
+        ref={buyTriggerRef}
+        onMouseEnter={() => updateTooltipSide(buyTriggerRef, setBuyTooltipSide)}
         className={`buy-card-clickable group/buy relative flex h-[40px] w-[160px] shrink-0 items-center justify-center rounded-md px-3 text-sm font-medium text-white transition-transform duration-100 ease-out ${canBuy ? "buy-card--affordable" : "buy-card--unaffordable"}`}
       >
         {!canBuy && (
           <div
-            className="pointer-events-none absolute left-1/2 top-full z-20 mt-1.5 min-w-[160px] -translate-x-1/2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 shadow-xl opacity-0 transition-opacity duration-150 group-hover/buy:opacity-100"
+            className={`pointer-events-none absolute top-1/2 z-20 min-w-[160px] -translate-y-1/2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 shadow-xl opacity-0 transition-opacity duration-150 group-hover/buy:opacity-100 ${
+              buyTooltipSide === "right" ? "left-full ml-1.5" : "right-full mr-1.5"
+            }`}
             role="tooltip"
           >
-            <div className="absolute bottom-full left-1/2 h-0 w-0 -translate-x-1/2 border-4 border-transparent border-b-zinc-800" />
+            {buyTooltipSide === "right" ? (
+              <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-r-zinc-800" />
+            ) : (
+              <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-l-zinc-800" />
+            )}
             <div className="flex flex-col gap-1.5 text-left">
               <div className="flex items-center justify-between gap-3 whitespace-nowrap">
                 <span className="text-cyan-400 text-sm" aria-hidden>●</span>

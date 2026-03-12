@@ -73,9 +73,9 @@ export function GameScreen() {
 
   return (
     <BuyModeProvider>
-      <div className="flex min-h-screen flex-col bg-zinc-800 text-zinc-100">
+      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-zinc-800 text-zinc-100">
         <Header />
-        <main className="flex-1 p-4">
+        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-2">
           <GeneratorList />
         </main>
       </div>

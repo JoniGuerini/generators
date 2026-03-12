@@ -45,14 +45,43 @@ export function getUpgradeCostProduction(generatorNumber: number, currentRank: n
   );
 }
 
-/** Tickets por segundo = 1 + ranque (base 1/s, cada ranque +1/s). */
-export function getTicketsPerSecond(upgradeTicketRateRank: number): number {
-  return 1 + Math.max(0, upgradeTicketRateRank);
+/** Marcos de troca: recurso base → +1 ▲/s. Índice 0 = 500, 1 = 5k, 2 = 5M, 3 = 5B, 4 = 5T, 5 = 5Qa, … */
+export function getTicketTradeThreshold(index: number): Decimal {
+  const exp = index <= 1 ? 2 + index : 3 * index;
+  return Decimal.fromNumber(5).mul(Decimal.pow(Decimal.fromNumber(10), exp));
+}
+
+/** Tickets por segundo = 1 + ranque ◆ + trocas de recurso base. */
+export function getTicketsPerSecond(
+  upgradeTicketRateRank: number,
+  ticketTradeMilestoneCount: number = 0
+): number {
+  return (
+    1 +
+    Math.max(0, upgradeTicketRateRank) +
+    Math.max(0, ticketTradeMilestoneCount)
+  );
 }
 
 /** Custo em ◆ para o próximo ranque da melhoria "tickets por segundo" (ranques infinitos). */
 export function getUpgradeCostTicketRate(currentRank: number): Decimal {
   return Decimal.fromNumber(10).mul(
+    Decimal.pow(Decimal.fromNumber(2), currentRank)
+  );
+}
+
+/** Custo efetivo para comprar gerador (cada ranque global reduz pela metade). */
+export function getEffectiveGeneratorCost(
+  baseCost: Decimal,
+  upgradeGeneratorCostHalfRank: number
+): Decimal {
+  if (upgradeGeneratorCostHalfRank <= 0) return baseCost;
+  return baseCost.div(Decimal.pow(Decimal.fromNumber(2), upgradeGeneratorCostHalfRank));
+}
+
+/** Custo em ◆ para o próximo ranque da melhoria global "custo de compra ÷2" (ranques infinitos). */
+export function getUpgradeCostGeneratorCostHalf(currentRank: number): Decimal {
+  return Decimal.fromNumber(50).mul(
     Decimal.pow(Decimal.fromNumber(2), currentRank)
   );
 }

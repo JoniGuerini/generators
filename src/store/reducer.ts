@@ -11,11 +11,14 @@ import {
 import {
   getEffectiveCycleTimeSeconds,
   getEffectiveProductionPerCycle,
+  getEffectiveGeneratorCost,
   getMaxCycleSpeedRank,
   getUpgradeCostCycleSpeed,
   getUpgradeCostProduction,
+  getUpgradeCostGeneratorCostHalf,
   getTicketsPerSecond,
   getUpgradeCostTicketRate,
+  getTicketTradeThreshold,
 } from "@/engine/upgrades";
 
 export type GameAction =
@@ -24,6 +27,8 @@ export type GameAction =
   | { type: "CLAIM_MILESTONES"; id: GeneratorId }
   | { type: "BUY_UPGRADE"; id: GeneratorId; upgradeType: "cycleSpeed" | "production" }
   | { type: "BUY_TICKET_RATE_UPGRADE" }
+  | { type: "TRADE_BASE_FOR_TICKET_RATE" }
+  | { type: "BUY_GENERATOR_COST_HALF_UPGRADE" }
   | { type: "RESET_GAME" }
   | { type: "REPLACE_STATE"; state: GameState };
 
@@ -74,7 +79,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       let ticketCurrency = state.ticketCurrency;
       let ticketAccumulator = state.ticketAccumulator;
       if (hasAnyGenerator) {
-        const ticketsPerSec = getTicketsPerSecond(state.upgradeTicketRateRank);
+        const ticketsPerSec = getTicketsPerSecond(
+          state.upgradeTicketRateRank,
+          state.ticketTradeMilestoneCount
+        );
         const acc = ticketAccumulator + deltaSec;
         const wholeSeconds = Math.floor(acc);
         if (wholeSeconds >= 1) {
@@ -111,13 +119,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const def = GENERATOR_DEFS[action.id];
       const genIndex = state.generators.findIndex((g) => g.id === action.id);
       if (genIndex < 0 || action.amount < 1) return state;
-      const maxByBase = state.baseResource.div(def.cost).floor();
+      const effectiveCost = getEffectiveGeneratorCost(
+        def.cost,
+        state.upgradeGeneratorCostHalfRank
+      );
+      const effectiveCostPrev = getEffectiveGeneratorCost(
+        def.costPreviousGenerator,
+        state.upgradeGeneratorCostHalfRank
+      );
+      const maxByBase = state.baseResource.div(effectiveCost).floor();
       const maxByTickets = state.ticketCurrency.floor();
       let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
-      if (def.costPreviousGenerator.gt(Decimal.dZero) && def.produces !== "base") {
+      if (effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base") {
         const prevGen = state.generators.find((g) => g.id === def.produces);
         if (prevGen) {
-          maxByPrev = prevGen.quantity.div(def.costPreviousGenerator).floor();
+          maxByPrev = prevGen.quantity.div(effectiveCostPrev).floor();
         }
       }
       const maxByTicketsNum = Math.min(maxByTickets.toNumber(), Number.MAX_SAFE_INTEGER);
@@ -132,11 +148,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       );
       const amountDecimal = maxAffordable;
       if (amountDecimal.lte(Decimal.dZero)) return state;
-      const totalCost = def.cost.mul(amountDecimal);
+      const totalCost = effectiveCost.mul(amountDecimal);
       const amountNum = amountDecimal.toNumber();
       const totalPrevCost =
-        def.costPreviousGenerator.gt(Decimal.dZero) && def.produces !== "base"
-          ? def.costPreviousGenerator.mul(amountDecimal)
+        effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base"
+          ? effectiveCostPrev.mul(amountDecimal)
           : Decimal.dZero;
 
       const nextGenerators = state.generators.map((g, i) => {
@@ -202,6 +218,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         milestoneCurrency: state.milestoneCurrency.sub(cost),
         upgradeTicketRateRank: state.upgradeTicketRateRank + 1,
+      };
+    }
+
+    case "BUY_GENERATOR_COST_HALF_UPGRADE": {
+      const cost = getUpgradeCostGeneratorCostHalf(state.upgradeGeneratorCostHalfRank);
+      if (state.milestoneCurrency.lt(cost)) return state;
+      return {
+        ...state,
+        milestoneCurrency: state.milestoneCurrency.sub(cost),
+        upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank + 1,
+      };
+    }
+
+    case "TRADE_BASE_FOR_TICKET_RATE": {
+      const cost = getTicketTradeThreshold(state.ticketTradeMilestoneCount);
+      if (state.baseResource.lt(cost)) return state;
+      return {
+        ...state,
+        baseResource: state.baseResource.sub(cost),
+        ticketTradeMilestoneCount: state.ticketTradeMilestoneCount + 1,
       };
     }
 

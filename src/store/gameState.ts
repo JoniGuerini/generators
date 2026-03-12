@@ -28,6 +28,10 @@ export interface GameState {
   milestoneCurrency: Decimal;
   /** Ranque da melhoria "tickets por segundo": base 1/s, cada ranque +1/s (infinitos). */
   upgradeTicketRateRank: number;
+  /** Quantas vezes trocou recurso base por +1 ▲/s (marcos 500, 5k, 5M, 5B, …). */
+  ticketTradeMilestoneCount: number;
+  /** Ranque da melhoria global "reduzir custo de compra pela metade" (0 = sem; cada ranque ÷2 no custo). */
+  upgradeGeneratorCostHalfRank: number;
   generators: GeneratorState[];
   lastUpdateTimestamp: number;
 }
@@ -55,6 +59,8 @@ export function getInitialState(): GameState {
     ticketAccumulator: 0,
     milestoneCurrency: ZERO,
     upgradeTicketRateRank: 0,
+    ticketTradeMilestoneCount: 0,
+    upgradeGeneratorCostHalfRank: 0,
     generators: GENERATOR_IDS.map((id) => initialGeneratorState(id)),
     lastUpdateTimestamp: Date.now(),
   };

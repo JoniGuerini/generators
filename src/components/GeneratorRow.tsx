@@ -6,6 +6,7 @@ import type { GeneratorId } from "@/engine/constants";
 import {
   getEffectiveCycleTimeSeconds,
   getEffectiveProductionPerCycle,
+  getEffectiveGeneratorCost,
 } from "@/engine/upgrades";
 import { formatNumber, formatTime } from "@/utils/format";
 import { useSmoothCycleProgress } from "@/hooks/useSmoothCycleProgress";
@@ -53,27 +54,35 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
     cycleTimeSec,
     hasQuantity
   );
-  const maxByBase = state.baseResource.div(def.cost).floor();
+  const effectiveCost = getEffectiveGeneratorCost(
+    def.cost,
+    state.upgradeGeneratorCostHalfRank
+  );
+  const effectiveCostPrev = getEffectiveGeneratorCost(
+    def.costPreviousGenerator,
+    state.upgradeGeneratorCostHalfRank
+  );
+  const maxByBase = state.baseResource.div(effectiveCost).floor();
   const maxByTickets = state.ticketCurrency.floor();
   let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
-  if (def.costPreviousGenerator.gt(Decimal.dZero) && def.produces !== "base") {
+  if (effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base") {
     const prevGen = state.generators.find((g) => g.id === def.produces);
     if (prevGen) {
-      maxByPrev = prevGen.quantity.div(def.costPreviousGenerator).floor();
+      maxByPrev = prevGen.quantity.div(effectiveCostPrev).floor();
     }
   }
   let maxAffordable = maxByBase;
   if (maxByTickets.lt(maxAffordable)) maxAffordable = maxByTickets;
   if (maxByPrev.lt(maxAffordable)) maxAffordable = maxByPrev;
   const hasEnoughPrev =
-    def.costPreviousGenerator.lte(Decimal.dZero) ||
+    effectiveCostPrev.lte(Decimal.dZero) ||
     def.produces === "base" ||
     (() => {
       const prevGen = state.generators.find((g) => g.id === def.produces);
-      return prevGen ? Decimal.gte(prevGen.quantity, def.costPreviousGenerator) : false;
+      return prevGen ? Decimal.gte(prevGen.quantity, effectiveCostPrev) : false;
     })();
   const canBuy =
-    Decimal.gte(state.baseResource, def.cost) &&
+    Decimal.gte(state.baseResource, effectiveCost) &&
     Decimal.gte(state.ticketCurrency, Decimal.dOne) &&
     hasEnoughPrev;
   const producedPerCycle = productionPerCycle.mul(quantity);
@@ -81,14 +90,14 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
   const producedPerSecond =
     cycleTimeSec > 0 ? producedPerCycle.div(cycleTimeSec) : Decimal.dZero;
   const buyAmount = getBuyAmount(buyMode, maxAffordable);
-  const totalCost = buyAmount >= 1 ? def.cost.mul(buyAmount) : Decimal.dZero;
+  const totalCost = buyAmount >= 1 ? effectiveCost.mul(buyAmount) : Decimal.dZero;
   /* Quando % resulta em 0 (não pode comprar nenhum), mostramos valor padrão: custo de 1 unidade, sem número na quantidade */
-  const displayCost = buyAmount >= 1 ? totalCost : def.cost;
+  const displayCost = buyAmount >= 1 ? totalCost : effectiveCost;
   const displayPrevCost =
-    buyAmount >= 1 && def.costPreviousGenerator.gt(Decimal.dZero)
-      ? def.costPreviousGenerator.mul(buyAmount)
-      : def.costPreviousGenerator;
-  const hasPrevCost = def.costPreviousGenerator.gt(Decimal.dZero) && def.produces !== "base";
+    buyAmount >= 1 && effectiveCostPrev.gt(Decimal.dZero)
+      ? effectiveCostPrev.mul(buyAmount)
+      : effectiveCostPrev;
+  const hasPrevCost = effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base";
   const ticketsRequired = buyAmount >= 1 ? buyAmount : 1;
   const lacksBase = state.baseResource.lt(displayCost);
   const lacksTickets = state.ticketCurrency.lt(Decimal.fromNumber(ticketsRequired));

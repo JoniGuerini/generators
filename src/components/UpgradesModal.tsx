@@ -8,8 +8,10 @@ import {
   getMaxCycleSpeedRank,
   getUpgradeCostCycleSpeed,
   getUpgradeCostProduction,
+  getUpgradeCostGeneratorCostHalf,
   getTicketsPerSecond,
   getUpgradeCostTicketRate,
+  getTicketTradeThreshold,
 } from "@/engine/upgrades";
 import { formatNumber } from "@/utils/format";
 
@@ -30,9 +32,14 @@ export function UpgradesModal({ onClose }: UpgradesModalProps) {
     }
   );
 
-  const ticketsPerSec = getTicketsPerSecond(state.upgradeTicketRateRank);
+  const ticketsPerSec = getTicketsPerSecond(
+    state.upgradeTicketRateRank,
+    state.ticketTradeMilestoneCount
+  );
   const costTicketRate = getUpgradeCostTicketRate(state.upgradeTicketRateRank);
   const canBuyTicketRate = state.milestoneCurrency.gte(costTicketRate);
+  const tradeCost = getTicketTradeThreshold(state.ticketTradeMilestoneCount);
+  const canTrade = state.baseResource.gte(tradeCost);
 
   return (
     <div
@@ -88,40 +95,114 @@ export function UpgradesModal({ onClose }: UpgradesModalProps) {
         </div>
         <div className="flex-1 overflow-y-auto p-4">
           {tab === "tickets" ? (
-            <div className="rounded-lg border border-zinc-600 bg-zinc-700/50 p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-amber-400" aria-hidden>▲</span>
-                <span className="font-medium text-white">Tickets por segundo</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded bg-zinc-800/80 px-3 py-2">
-                <div>
-                  <span className="text-sm text-zinc-300">
-                    Produção: {ticketsPerSec} ▲/s
-                  </span>
-                  <span className="ml-2 text-xs text-zinc-500">
-                    (ranque {state.upgradeTicketRateRank})
-                  </span>
+            <div className="space-y-4">
+              <div className="rounded-lg border border-zinc-600 bg-zinc-700/50 p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="text-amber-400" aria-hidden>▲</span>
+                  <span className="font-medium text-white">Tickets por segundo</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: "BUY_TICKET_RATE_UPGRADE" })}
-                  disabled={!canBuyTicketRate}
-                  title={`Custo: ◆ ${formatNumber(costTicketRate)}`}
-                  className={`rounded px-3 py-1 text-sm font-medium transition ${
-                    canBuyTicketRate
-                      ? "bg-purple-600 text-white hover:bg-purple-500"
-                      : "cursor-not-allowed bg-zinc-600 text-zinc-400"
-                  }`}
-                >
-                  Comprar ranque (◆ {formatNumber(costTicketRate)})
-                </button>
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded bg-zinc-800/80 px-3 py-2">
+                  <div>
+                    <span className="text-sm text-zinc-300">
+                      Produção: {ticketsPerSec} ▲/s
+                    </span>
+                    <span className="ml-2 text-xs text-zinc-500">
+                      (ranque ◆ {state.upgradeTicketRateRank}
+                      {state.ticketTradeMilestoneCount > 0
+                        ? ` · trocas ● ${state.ticketTradeMilestoneCount}`
+                        : ""}
+                    )
+                  </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "BUY_TICKET_RATE_UPGRADE" })}
+                    disabled={!canBuyTicketRate}
+                    title={`Custo: ◆ ${formatNumber(costTicketRate)}`}
+                    className={`rounded px-3 py-1 text-sm font-medium transition ${
+                      canBuyTicketRate
+                        ? "bg-purple-600 text-white hover:bg-purple-500"
+                        : "cursor-not-allowed bg-zinc-600 text-zinc-400"
+                    }`}
+                  >
+                    Comprar ranque (◆ {formatNumber(costTicketRate)})
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-zinc-500">
+                  Base 1 ▲/s; cada ranque ◆ adiciona +1 ▲/s (ranques infinitos).
+                </p>
               </div>
-              <p className="mt-2 text-xs text-zinc-500">
-                Base 1 ▲/s; cada ranque adiciona +1 ▲/s (ranques infinitos).
-              </p>
+              <div className="rounded-lg border border-zinc-600 bg-zinc-700/50 p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="text-cyan-400" aria-hidden>●</span>
+                  <span className="font-medium text-white">Trocar recurso base por +1 ▲/s</span>
+                </div>
+                <p className="mb-2 text-xs text-zinc-500">
+                  Troca permanente: gasta ● e ganha +1 ▲/s. Marcos: 500 → 5k → 5M → 5B → 5T → 5Qa → …
+                </p>
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded bg-zinc-800/80 px-3 py-2">
+                  <div>
+                    <span className="text-sm text-zinc-300">
+                      Próximo marco: <span className="font-semibold text-cyan-300">● {formatNumber(tradeCost)}</span>
+                    </span>
+                    <span className="ml-2 text-xs text-zinc-500">
+                      (trocas feitas: {state.ticketTradeMilestoneCount})
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => dispatch({ type: "TRADE_BASE_FOR_TICKET_RATE" })}
+                    disabled={!canTrade}
+                    title={`Trocar ● ${formatNumber(tradeCost)} por +1 ▲/s`}
+                    className={`rounded px-3 py-1 text-sm font-medium transition ${
+                      canTrade
+                        ? "bg-cyan-600 text-white hover:bg-cyan-500"
+                        : "cursor-not-allowed bg-zinc-600 text-zinc-400"
+                    }`}
+                  >
+                    Trocar por +1 ▲/s
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
-          <ul className="space-y-4">
+          <div className="space-y-4">
+            <div className="rounded-lg border border-zinc-600 bg-zinc-700/50 p-3">
+              <div className="mb-2 font-medium text-white">
+                Melhoria global: custo de compra ÷2
+              </div>
+              <p className="mb-2 text-xs text-zinc-500">
+                Reduz o custo (● e gerador anterior) de todos os geradores pela metade. Cada ranque aplica ÷2 de novo.
+              </p>
+              {(() => {
+                const rank = state.upgradeGeneratorCostHalfRank;
+                const costHalf = getUpgradeCostGeneratorCostHalf(rank);
+                const canBuyHalf = state.milestoneCurrency.gte(costHalf);
+                return (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded bg-zinc-800/80 px-3 py-2">
+                    <div>
+                      <span className="text-sm text-zinc-300">
+                        Ranque atual: {rank}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => dispatch({ type: "BUY_GENERATOR_COST_HALF_UPGRADE" })}
+                      disabled={!canBuyHalf}
+                      title={`Custo: ◆ ${formatNumber(costHalf)}`}
+                      className={`rounded px-3 py-1 text-sm font-medium transition ${
+                        canBuyHalf
+                          ? "bg-purple-600 text-white hover:bg-purple-500"
+                          : "cursor-not-allowed bg-zinc-600 text-zinc-400"
+                      }`}
+                    >
+                      Comprar ranque (◆ {formatNumber(costHalf)})
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
+            <ul className="space-y-4">
             {generatorIdsWithUnits.map((id) => {
               const def = GENERATOR_DEFS[id];
               const gen = state.generators.find((g) => g.id === id);
@@ -226,7 +307,8 @@ export function UpgradesModal({ onClose }: UpgradesModalProps) {
                 </li>
               );
             })}
-          </ul>
+            </ul>
+          </div>
           )}
         </div>
       </div>

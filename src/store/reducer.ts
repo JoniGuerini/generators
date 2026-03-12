@@ -157,7 +157,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const nextGenerators = state.generators.map((g, i) => {
         if (i === genIndex) {
-          const next = { ...g, quantity: g.quantity.add(Decimal.fromNumber(amountNum)) };
+          const next = {
+            ...g,
+            quantity: g.quantity.add(Decimal.fromNumber(amountNum)),
+            everOwned: true,
+          };
           return {
             ...next,
             currentMilestoneTargetIndex: advanceMilestoneTargetIndex(

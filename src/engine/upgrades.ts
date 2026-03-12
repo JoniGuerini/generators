@@ -31,18 +31,14 @@ export function getEffectiveProductionPerCycle(
   return baseProductionPerCycle.mul(Decimal.pow(Decimal.fromNumber(2), upgradeProductionRank));
 }
 
-/** Custo em ◆ para o próximo ranque da melhoria "tempo de ciclo" (gerador N, ranque atual). */
-export function getUpgradeCostCycleSpeed(generatorNumber: number, currentRank: number): Decimal {
-  return Decimal.fromNumber(3 * generatorNumber).mul(
-    Decimal.pow(Decimal.fromNumber(2), currentRank)
-  );
+/** Custo em ◆ para o próximo ranque da melhoria "tempo de ciclo". Base 1, dobra a cada ranque (1, 2, 4, 8…), igual para todos os geradores. */
+export function getUpgradeCostCycleSpeed(_generatorNumber: number, currentRank: number): Decimal {
+  return Decimal.fromNumber(2 ** currentRank);
 }
 
-/** Custo em ◆ para o próximo ranque da melhoria "dobrar produção" (gerador N, ranque atual). */
-export function getUpgradeCostProduction(generatorNumber: number, currentRank: number): Decimal {
-  return Decimal.fromNumber(2 * generatorNumber).mul(
-    Decimal.pow(Decimal.fromNumber(2), currentRank)
-  );
+/** Custo em ◆ para o próximo ranque da melhoria "dobrar produção". Base 1, dobra a cada ranque (1, 2, 4, 8…), igual para todos os geradores. */
+export function getUpgradeCostProduction(_generatorNumber: number, currentRank: number): Decimal {
+  return Decimal.fromNumber(2 ** currentRank);
 }
 
 /** Marcos de troca: recurso base → +1 ▲/s. Índice 0 = 500, 1 = 5k, 2 = 5M, 3 = 5B, 4 = 5T, 5 = 5Qa, … */

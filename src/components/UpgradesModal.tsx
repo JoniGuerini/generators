@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Decimal from "break_eternity.js";
 import { useGameState, useGameDispatch } from "@/store/useGameStore";
-import { GENERATOR_DEFS, GENERATOR_IDS } from "@/engine/constants";
+import { GENERATOR_DEFS } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import {
   getEffectiveCycleTimeSeconds,
@@ -128,12 +128,10 @@ export function UpgradesModal({ onClose }: UpgradesModalProps) {
   const state = useGameState();
   const dispatch = useGameDispatch();
   const [tab, setTab] = useState<UpgradesTab>("geradores");
-  const generatorIdsWithUnits = (GENERATOR_IDS as readonly GeneratorId[]).filter(
-    (id) => {
-      const gen = state.generators.find((g) => g.id === id);
-      return gen && Decimal.gte(gen.quantity, Decimal.dOne);
-    }
-  );
+  /** Só geradores já desbloqueados (everOwned) podem ser aprimorados; o próximo a comprar não. */
+  const generatorIdsForUpgrades = state.generators
+    .filter((g) => g.everOwned)
+    .map((g) => g.id);
 
   const ticketsPerSec = getTicketsPerSecond(
     state.upgradeTicketRateRank,
@@ -150,8 +148,12 @@ export function UpgradesModal({ onClose }: UpgradesModalProps) {
       aria-modal="true"
       role="dialog"
       aria-labelledby="upgrades-title"
+      onClick={onClose}
     >
-      <div className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-2xl border border-zinc-600/90 bg-zinc-800 shadow-2xl overflow-hidden">
+      <div
+        className="flex max-h-[88vh] w-full max-w-4xl flex-col rounded-2xl border border-zinc-600/90 bg-zinc-800 shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between gap-4 border-b border-zinc-700/80 bg-zinc-800/95 px-5 py-4">
           <h2
@@ -278,7 +280,7 @@ export function UpgradesModal({ onClose }: UpgradesModalProps) {
                   Por gerador
                 </h3>
                 <ul className="space-y-4">
-                  {generatorIdsWithUnits.map((id) => {
+                  {generatorIdsForUpgrades.map((id) => {
                     const def = GENERATOR_DEFS[id];
                     const gen = state.generators.find((g) => g.id === id);
                     if (!gen) return null;

@@ -20,6 +20,7 @@ interface SavedState {
   generators: {
     id: string;
     quantity: string;
+    everOwned?: boolean;
     cycleProgress: number;
     cycleStartTime: number;
     claimedMilestoneIndex?: number;
@@ -43,6 +44,7 @@ function serialize(state: GameState): string {
     generators: state.generators.map((g) => ({
       id: g.id,
       quantity: g.quantity.toString(),
+      everOwned: g.everOwned,
       cycleProgress: g.cycleProgress,
       cycleStartTime: g.cycleStartTime,
       claimedMilestoneIndex: g.claimedMilestoneIndex,
@@ -62,19 +64,24 @@ function deserialize(raw: string): GameState | null {
     const initial = getInitialState();
     const now = Date.now();
     const byId = new Map(
-      saved.generators?.map((g) => [
-        g.id,
-        {
-          id: g.id as GameState["generators"][0]["id"],
-          quantity: Decimal.fromString(g.quantity),
-          cycleProgress: Number(g.cycleProgress) || 0,
-          cycleStartTime: Number(g.cycleStartTime) || now,
-          claimedMilestoneIndex: Number(g.claimedMilestoneIndex) || 0,
-          currentMilestoneTargetIndex: Number(g.currentMilestoneTargetIndex) || 0,
-          upgradeCycleSpeedRank: Number((g as SavedState["generators"][0]).upgradeCycleSpeedRank) || 0,
-          upgradeProductionRank: Number((g as SavedState["generators"][0]).upgradeProductionRank) || 0,
-        },
-      ]) ?? []
+      saved.generators?.map((g) => {
+        const q = Decimal.fromString(g.quantity);
+        const everOwned = (g as { everOwned?: boolean }).everOwned ?? q.gte(Decimal.dOne);
+        return [
+          g.id,
+          {
+            id: g.id as GameState["generators"][0]["id"],
+            quantity: q,
+            everOwned,
+            cycleProgress: Number(g.cycleProgress) || 0,
+            cycleStartTime: Number(g.cycleStartTime) || now,
+            claimedMilestoneIndex: Number(g.claimedMilestoneIndex) || 0,
+            currentMilestoneTargetIndex: Number(g.currentMilestoneTargetIndex) || 0,
+            upgradeCycleSpeedRank: Number((g as SavedState["generators"][0]).upgradeCycleSpeedRank) || 0,
+            upgradeProductionRank: Number((g as SavedState["generators"][0]).upgradeProductionRank) || 0,
+          },
+        ];
+      }) ?? []
     );
     const generators = initial.generators.map((g) => {
       const loaded = byId.get(g.id);

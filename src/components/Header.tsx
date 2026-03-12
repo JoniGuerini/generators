@@ -13,31 +13,37 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-zinc-700/80 bg-zinc-800 px-2 py-2 shadow">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-cyan-400" aria-hidden>
+        <div className="flex items-center gap-2">
+          <div
+            className="flex h-10 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
+            title="Recurso base"
+          >
+            <span className="shrink-0 text-cyan-400" aria-hidden>
               ●
             </span>
-            <span className="text-xl font-semibold tabular-nums text-white">
+            <span className="min-w-0 flex-1 truncate text-right text-lg font-semibold tabular-nums text-white">
               {formatNumber(state.baseResource)}
             </span>
           </div>
-          <div className="flex items-center gap-2" title="Moeda por segundo (1 a cada 1s, para comprar geradores)">
-            <span className="text-amber-400" aria-hidden>
+          <div
+            className="flex h-10 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
+            title="Moeda por segundo (1 a cada 1s, para comprar geradores)"
+          >
+            <span className="shrink-0 text-amber-400" aria-hidden>
               ▲
             </span>
-            <span className="text-lg font-semibold tabular-nums text-amber-200">
+            <span className="min-w-0 flex-1 truncate text-right text-lg font-semibold tabular-nums text-amber-200">
               {formatNumber(state.ticketCurrency)}
             </span>
           </div>
           <div
-            className="flex items-center gap-2"
+            className="flex h-10 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
             title="Moeda de marcos (melhorias)"
           >
-            <span className="text-purple-400" aria-hidden>
+            <span className="shrink-0 text-purple-400" aria-hidden>
               ◆
             </span>
-            <span className="text-lg font-semibold tabular-nums text-purple-200">
+            <span className="min-w-0 flex-1 truncate text-right text-lg font-semibold tabular-nums text-purple-200">
               {formatNumber(state.milestoneCurrency)}
             </span>
           </div>

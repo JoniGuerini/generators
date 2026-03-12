@@ -130,6 +130,84 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
   const progressToNext = getProgressTowardTarget(quantity, gen.currentMilestoneTargetIndex);
   const nextThreshold = getNextMilestoneThresholdFromTarget(gen.currentMilestoneTargetIndex);
   const canClaim = pendingMilestones > 0;
+  const isLocked = !gen.everOwned;
+
+  /* Gerador ainda não desbloqueado: visual diferente, "Compre para desbloquear" + botão de compra */
+  if (isLocked) {
+    return (
+      <div className="flex h-[40px] min-w-0 flex-nowrap items-center gap-2">
+        <div
+          className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-dashed border-zinc-500 bg-zinc-700/80 text-sm font-bold text-zinc-400"
+          aria-label={def.name}
+          title="Gerador bloqueado — compre para desbloquear"
+        >
+          {id.replace("generator", "")}
+        </div>
+        <div className="flex h-[40px] min-w-0 flex-1 items-center justify-center rounded-md border-2 border-dashed border-zinc-600 bg-zinc-800/60">
+          <span className="text-center text-sm font-medium text-zinc-500">
+            Compre para desbloquear
+          </span>
+        </div>
+        <div
+          ref={buyTriggerRef}
+          onMouseEnter={() => updateTooltipSide(buyTriggerRef, setBuyTooltipSide)}
+          className={`buy-card-clickable group/buy relative flex h-[40px] w-[160px] shrink-0 items-center justify-center rounded-md px-3 text-sm font-medium text-white transition-transform duration-100 ease-out ${canBuy ? "buy-card--affordable" : "buy-card--unaffordable"}`}
+        >
+          {!canBuy && (
+            <div
+              className={`pointer-events-none absolute top-1/2 z-20 min-w-[160px] -translate-y-1/2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 shadow-xl opacity-0 transition-opacity duration-150 group-hover/buy:opacity-100 ${
+                buyTooltipSide === "right" ? "left-full ml-1.5" : "right-full mr-1.5"
+              }`}
+              role="tooltip"
+            >
+              {buyTooltipSide === "right" ? (
+                <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-r-zinc-800" />
+              ) : (
+                <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-l-zinc-800" />
+              )}
+              <div className="flex flex-col gap-1.5 text-left">
+                <div className="flex items-center justify-between gap-3 whitespace-nowrap">
+                  <span className="text-cyan-400 text-sm" aria-hidden>●</span>
+                  <span className={`text-sm font-semibold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>
+                    {formatNumber(displayCost)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 whitespace-nowrap">
+                  <span className="text-amber-400 text-sm" aria-hidden>▲</span>
+                  <span className={`text-sm font-semibold tabular-nums ${lacksTickets ? "text-red-400" : "text-white"}`}>
+                    {ticketsRequired}
+                  </span>
+                </div>
+                {hasPrevCost && def.produces !== "base" && (
+                  <div className="flex items-center justify-between gap-3 whitespace-nowrap">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-red-600 text-[10px] font-bold text-white" aria-hidden>
+                      {def.produces.replace("generator", "")}
+                    </span>
+                    <span className={`text-sm font-semibold tabular-nums ${lacksPrev ? "text-red-400" : "text-white"}`}>
+                      {formatNumber(displayPrevCost)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <span className="pointer-events-none shrink-0">
+            Comprar{buyAmount > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(buyAmount))}</span></> : " 1"}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (buyAmount >= 1) dispatch({ type: "BUY_GENERATOR", id, amount: buyAmount });
+            }}
+            disabled={!canBuy || buyAmount < 1}
+            title={canBuy ? undefined : `Custo: ● ${formatNumber(displayCost)} · ▲ ${ticketsRequired}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`}
+            className="absolute inset-0 rounded-md outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-0"
+            aria-label="Comprar gerador para desbloquear"
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[40px] min-w-0 flex-nowrap items-center gap-2">

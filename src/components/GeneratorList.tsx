@@ -1,10 +1,13 @@
-import { GENERATOR_IDS } from "@/engine/constants";
+import { useGameState } from "@/store/useGameStore";
+import { getVisibleGeneratorIds } from "@/store/gameState";
 import { GeneratorRow } from "./GeneratorRow";
 
 export function GeneratorList() {
+  const state = useGameState();
+  const visibleIds = getVisibleGeneratorIds(state);
   return (
     <ul className="flex min-w-0 flex-col gap-3">
-      {GENERATOR_IDS.map((id) => (
+      {visibleIds.map((id) => (
         <li key={id}>
           <GeneratorRow id={id} />
         </li>

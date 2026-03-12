@@ -4,6 +4,8 @@ import { GENERATOR_IDS, type GeneratorId } from "@/engine/constants";
 export interface GeneratorState {
   id: GeneratorId;
   quantity: Decimal;
+  /** true assim que o jogador compra pelo menos 1 unidade; não volta a false (gerador fica visível mesmo com 0). */
+  everOwned: boolean;
   /** Progresso do ciclo 0..1 (lógica do jogo) */
   cycleProgress: number;
   /** Timestamp do início do ciclo atual (para animação fluida da barra) */
@@ -43,6 +45,7 @@ function initialGeneratorState(id: GeneratorId): GeneratorState {
   return {
     id,
     quantity: ZERO,
+    everOwned: false,
     cycleProgress: 0,
     cycleStartTime: now,
     claimedMilestoneIndex: 0,
@@ -50,6 +53,21 @@ function initialGeneratorState(id: GeneratorId): GeneratorState {
     upgradeCycleSpeedRank: 0,
     upgradeProductionRank: 0,
   };
+}
+
+/** IDs dos geradores a exibir na lista: todos que já foram desbloqueados (everOwned) + o próximo a comprar. */
+export function getVisibleGeneratorIds(state: GameState): GeneratorId[] {
+  const ids: GeneratorId[] = [];
+  let nextAdded = false;
+  for (const id of GENERATOR_IDS) {
+    const gen = state.generators.find((g) => g.id === id);
+    if (gen?.everOwned) ids.push(id);
+    else if (!nextAdded) {
+      ids.push(id);
+      nextAdded = true;
+    }
+  }
+  return ids;
 }
 
 export function getInitialState(): GameState {

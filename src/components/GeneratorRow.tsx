@@ -15,12 +15,25 @@ import {
   getCurrentMilestoneCount,
   getProgressTowardTarget,
   getNextMilestoneThresholdFromTarget,
+  getNextMilestoneFromQuantity,
   getCoinsFromClaiming,
 } from "@/utils/milestones";
 import type { BuyMode } from "@/contexts/BuyModeContext";
 
-function getBuyAmount(mode: BuyMode, maxAffordable: Decimal): number {
+function getBuyAmount(mode: BuyMode, maxAffordable: Decimal, quantity?: Decimal): number {
   if (mode === "1x") return 1;
+  if (mode === "marco") {
+    if (quantity == null) return maxAffordable.gte(Decimal.dOne) ? 1 : 0;
+    const nextMarco = getNextMilestoneFromQuantity(quantity);
+    const toBuyDecimal = nextMarco.sub(quantity).floor();
+    if (toBuyDecimal.lt(Decimal.dZero)) return maxAffordable.gte(Decimal.dOne) ? 1 : 0;
+    const toBuy = Decimal.min(toBuyDecimal, maxAffordable);
+    const n = toBuy.toNumber();
+    if (!Number.isFinite(n) || n < 0) return 0;
+    const amount = Math.min(n, Number.MAX_SAFE_INTEGER);
+    if (amount === 0 && Decimal.gte(maxAffordable, Decimal.dOne)) return 1;
+    return amount;
+  }
   const pct = mode === "1%" ? 0.01 : mode === "10%" ? 0.1 : mode === "50%" ? 0.5 : 1;
   const toBuyDecimal = maxAffordable.mul(pct).floor();
   const n = toBuyDecimal.toNumber();
@@ -109,16 +122,38 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
   const showCycleTime = cycleTimeSec >= 1;
   const producedPerSecond =
     cycleTimeSec > 0 ? producedPerCycle.div(cycleTimeSec) : Decimal.dZero;
-  const buyAmount = getBuyAmount(buyMode, maxAffordable);
+  const buyAmount = getBuyAmount(buyMode, maxAffordable, quantity);
+  const amountNeededForMarco =
+    buyMode === "marco"
+      ? getNextMilestoneFromQuantity(quantity).sub(quantity).floor()
+      : null;
+  const canReachMarco =
+    amountNeededForMarco == null || maxAffordable.gte(amountNeededForMarco);
+  const showAsUnaffordable = !canBuy || (buyMode === "marco" && !canReachMarco);
+  const canClickBuy = canBuy && buyAmount >= 1 && (buyMode !== "marco" || canReachMarco);
+
+  /* No modo "marco", exibir sempre a quantidade até o próximo marco (no botão e no tooltip). */
+  const amountForDisplay =
+    buyMode === "marco" && amountNeededForMarco != null
+      ? Math.min(amountNeededForMarco.toNumber(), Number.MAX_SAFE_INTEGER)
+      : buyAmount;
+
   const totalCost = buyAmount >= 1 ? effectiveCost.mul(buyAmount) : Decimal.dZero;
+  const costForDisplay =
+    buyMode === "marco" && amountNeededForMarco != null && amountNeededForMarco.gte(Decimal.dOne)
+      ? effectiveCost.mul(amountNeededForMarco)
+      : buyAmount >= 1 ? totalCost : effectiveCost;
+  const prevCostForDisplay =
+    buyMode === "marco" && amountNeededForMarco != null && effectiveCostPrev.gt(Decimal.dZero)
+      ? effectiveCostPrev.mul(amountNeededForMarco)
+      : buyAmount >= 1 && effectiveCostPrev.gt(Decimal.dZero)
+        ? effectiveCostPrev.mul(buyAmount)
+        : effectiveCostPrev;
   /* Quando % resulta em 0 (não pode comprar nenhum), mostramos valor padrão: custo de 1 unidade, sem número na quantidade */
-  const displayCost = buyAmount >= 1 ? totalCost : effectiveCost;
-  const displayPrevCost =
-    buyAmount >= 1 && effectiveCostPrev.gt(Decimal.dZero)
-      ? effectiveCostPrev.mul(buyAmount)
-      : effectiveCostPrev;
+  const displayCost = amountForDisplay >= 1 ? costForDisplay : effectiveCost;
+  const displayPrevCost = prevCostForDisplay;
   const hasPrevCost = effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base";
-  const ticketsRequired = buyAmount >= 1 ? buyAmount : 1;
+  const ticketsRequired = amountForDisplay >= 1 ? amountForDisplay : 1;
   const lacksBase = state.baseResource.lt(displayCost);
   const lacksTickets = state.ticketCurrency.lt(Decimal.fromNumber(ticketsRequired));
   const lacksPrev = hasPrevCost && !hasEnoughPrev;
@@ -151,39 +186,54 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
         <div
           ref={buyTriggerRef}
           onMouseEnter={() => updateTooltipSide(buyTriggerRef, setBuyTooltipSide)}
-          className={`buy-card-clickable group/buy relative flex h-[40px] w-[160px] shrink-0 items-center justify-center rounded-md px-3 text-sm font-medium text-white transition-transform duration-100 ease-out ${canBuy ? "buy-card--affordable" : "buy-card--unaffordable"}`}
+          className={`buy-card-clickable group/buy relative flex h-[40px] w-[160px] shrink-0 items-center justify-center rounded-md px-3 text-sm font-medium text-white transition-transform duration-100 ease-out ${!showAsUnaffordable ? "buy-card--affordable" : "buy-card--unaffordable"}`}
         >
-          {!canBuy && (
+          {showAsUnaffordable && (
             <div
-              className={`pointer-events-none absolute top-1/2 z-20 min-w-[160px] -translate-y-1/2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 shadow-xl opacity-0 transition-opacity duration-150 group-hover/buy:opacity-100 ${
+              className={`pointer-events-none absolute top-1/2 z-20 w-max min-w-0 -translate-y-1/2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 shadow-xl opacity-0 transition-opacity duration-150 group-hover/buy:opacity-100 ${
                 buyTooltipSide === "right" ? "left-full ml-1.5" : "right-full mr-1.5"
               }`}
               role="tooltip"
             >
               {buyTooltipSide === "right" ? (
-                <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-r-zinc-800" />
+                <>
+                  <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[7px] border-transparent border-r-zinc-600" aria-hidden />
+                  <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-r-zinc-800" aria-hidden />
+                </>
               ) : (
-                <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-l-zinc-800" />
+                <>
+                  <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[7px] border-transparent border-l-zinc-600" aria-hidden />
+                  <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-l-zinc-800" aria-hidden />
+                </>
               )}
-              <div className="flex flex-col gap-1.5 text-left">
-                <div className="flex items-center justify-between gap-3 whitespace-nowrap">
-                  <span className="text-cyan-400 text-sm" aria-hidden>●</span>
-                  <span className={`text-sm font-semibold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>
+              <div className="flex flex-row items-center gap-2">
+                <div
+                  className="flex h-9 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
+                  title="Recurso base"
+                >
+                  <span className="shrink-0 text-cyan-400" aria-hidden>●</span>
+                  <span className={`min-w-0 flex-1 truncate text-right text-sm font-semibold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>
                     {formatNumber(displayCost)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between gap-3 whitespace-nowrap">
-                  <span className="text-amber-400 text-sm" aria-hidden>▲</span>
-                  <span className={`text-sm font-semibold tabular-nums ${lacksTickets ? "text-red-400" : "text-white"}`}>
-                    {ticketsRequired}
+                <div
+                  className="flex h-9 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
+                  title="Tickets (▲)"
+                >
+                  <span className="shrink-0 text-amber-400" aria-hidden>▲</span>
+                  <span className={`min-w-0 flex-1 truncate text-right text-sm font-semibold tabular-nums ${lacksTickets ? "text-red-400" : "text-amber-200"}`}>
+                    {formatNumber(Decimal.fromNumber(ticketsRequired))}
                   </span>
                 </div>
                 {hasPrevCost && def.produces !== "base" && (
-                  <div className="flex items-center justify-between gap-3 whitespace-nowrap">
+                  <div
+                    className="flex h-9 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
+                    title={GENERATOR_DEFS[def.produces].name}
+                  >
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-red-600 text-[10px] font-bold text-white" aria-hidden>
                       {def.produces.replace("generator", "")}
                     </span>
-                    <span className={`text-sm font-semibold tabular-nums ${lacksPrev ? "text-red-400" : "text-white"}`}>
+                    <span className={`min-w-0 flex-1 truncate text-right text-sm font-semibold tabular-nums ${lacksPrev ? "text-red-400" : "text-white"}`}>
                       {formatNumber(displayPrevCost)}
                     </span>
                   </div>
@@ -192,15 +242,15 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
             </div>
           )}
           <span className="pointer-events-none shrink-0">
-            Comprar{buyAmount > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(buyAmount))}</span></> : " 1"}
+            Comprar{amountForDisplay > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(amountForDisplay))}</span></> : " 1"}
           </span>
           <button
             type="button"
             onClick={() => {
-              if (buyAmount >= 1) dispatch({ type: "BUY_GENERATOR", id, amount: buyAmount });
+              if (canClickBuy && buyAmount >= 1) dispatch({ type: "BUY_GENERATOR", id, amount: buyAmount });
             }}
-            disabled={!canBuy || buyAmount < 1}
-            title={canBuy ? undefined : `Custo: ● ${formatNumber(displayCost)} · ▲ ${ticketsRequired}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`}
+            disabled={!canClickBuy}
+            title={!showAsUnaffordable ? undefined : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`}
             className="absolute inset-0 rounded-md outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-0"
             aria-label="Comprar gerador para desbloquear"
           />
@@ -233,9 +283,15 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
           role="tooltip"
         >
           {milestoneTooltipSide === "right" ? (
-            <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-r-zinc-800" />
+            <>
+              <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[7px] border-transparent border-r-zinc-600" aria-hidden />
+              <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-r-zinc-800" aria-hidden />
+            </>
           ) : (
-            <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-l-zinc-800" />
+            <>
+              <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[7px] border-transparent border-l-zinc-600" aria-hidden />
+              <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-l-zinc-800" aria-hidden />
+            </>
           )}
           <div className="flex flex-col gap-1.5 text-left">
             <div className="flex items-center justify-between gap-4 whitespace-nowrap">
@@ -327,46 +383,61 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
         </div>
       </div>
 
-      {/* Card Comprar: tooltip de custo quando sem recurso; botão em absolute inset-0. */}
+      {/* Card Comprar: tooltip de custo quando sem recurso; no modo "marco", cinza se não der para atingir o marco. */}
       <div
         ref={buyTriggerRef}
         onMouseEnter={() => updateTooltipSide(buyTriggerRef, setBuyTooltipSide)}
-        className={`buy-card-clickable group/buy relative flex h-[40px] w-[160px] shrink-0 items-center justify-center rounded-md px-3 text-sm font-medium text-white transition-transform duration-100 ease-out ${canBuy ? "buy-card--affordable" : "buy-card--unaffordable"}`}
+        className={`buy-card-clickable group/buy relative flex h-[40px] w-[160px] shrink-0 items-center justify-center rounded-md px-3 text-sm font-medium text-white transition-transform duration-100 ease-out ${!showAsUnaffordable ? "buy-card--affordable" : "buy-card--unaffordable"}`}
       >
-        {!canBuy && (
+        {showAsUnaffordable && (
           <div
-            className={`pointer-events-none absolute top-1/2 z-20 min-w-[160px] -translate-y-1/2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 shadow-xl opacity-0 transition-opacity duration-150 group-hover/buy:opacity-100 ${
+            className={`pointer-events-none absolute top-1/2 z-20 w-max min-w-0 -translate-y-1/2 rounded-lg border border-zinc-600 bg-zinc-800 px-3 py-2 shadow-xl opacity-0 transition-opacity duration-150 group-hover/buy:opacity-100 ${
               buyTooltipSide === "right" ? "left-full ml-1.5" : "right-full mr-1.5"
             }`}
             role="tooltip"
           >
             {buyTooltipSide === "right" ? (
-              <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-r-zinc-800" />
+              <>
+                <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[7px] border-transparent border-r-zinc-600" aria-hidden />
+                <div className="absolute right-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-r-zinc-800" aria-hidden />
+              </>
             ) : (
-              <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-l-zinc-800" />
+              <>
+                <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[7px] border-transparent border-l-zinc-600" aria-hidden />
+                <div className="absolute left-full top-1/2 h-0 w-0 -translate-y-1/2 border-[6px] border-transparent border-l-zinc-800" aria-hidden />
+              </>
             )}
-            <div className="flex flex-col gap-1.5 text-left">
-              <div className="flex items-center justify-between gap-3 whitespace-nowrap">
-                <span className="text-cyan-400 text-sm" aria-hidden>●</span>
-                <span className={`text-sm font-semibold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>
+            <div className="flex flex-row items-center gap-2">
+              <div
+                className="flex h-9 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
+                title="Recurso base"
+              >
+                <span className="shrink-0 text-cyan-400" aria-hidden>●</span>
+                <span className={`min-w-0 flex-1 truncate text-right text-sm font-semibold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>
                   {formatNumber(displayCost)}
                 </span>
               </div>
-              <div className="flex items-center justify-between gap-3 whitespace-nowrap">
-                <span className="text-amber-400 text-sm" aria-hidden>▲</span>
-                <span className={`text-sm font-semibold tabular-nums ${lacksTickets ? "text-red-400" : "text-white"}`}>
-                  {ticketsRequired}
+              <div
+                className="flex h-9 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
+                title="Tickets (▲)"
+              >
+                <span className="shrink-0 text-amber-400" aria-hidden>▲</span>
+                <span className={`min-w-0 flex-1 truncate text-right text-sm font-semibold tabular-nums ${lacksTickets ? "text-red-400" : "text-amber-200"}`}>
+                  {formatNumber(Decimal.fromNumber(ticketsRequired))}
                 </span>
               </div>
               {hasPrevCost && def.produces !== "base" && (
-                <div className="flex items-center justify-between gap-3 whitespace-nowrap">
+                <div
+                  className="flex h-9 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
+                  title={GENERATOR_DEFS[def.produces].name}
+                >
                   <span
                     className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-red-600 text-[10px] font-bold text-white"
                     aria-hidden
                   >
                     {def.produces.replace("generator", "")}
                   </span>
-                  <span className={`text-sm font-semibold tabular-nums ${lacksPrev ? "text-red-400" : "text-white"}`}>
+                  <span className={`min-w-0 flex-1 truncate text-right text-sm font-semibold tabular-nums ${lacksPrev ? "text-red-400" : "text-white"}`}>
                     {formatNumber(displayPrevCost)}
                   </span>
                 </div>
@@ -375,15 +446,15 @@ export function GeneratorRow({ id }: GeneratorRowProps) {
           </div>
         )}
         <span className="pointer-events-none shrink-0">
-          Comprar{buyAmount > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(buyAmount))}</span></> : null}
+          Comprar{amountForDisplay > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(amountForDisplay))}</span></> : null}
         </span>
         <button
           type="button"
           onClick={() => {
-            if (buyAmount >= 1) dispatch({ type: "BUY_GENERATOR", id, amount: buyAmount });
+            if (canClickBuy && buyAmount >= 1) dispatch({ type: "BUY_GENERATOR", id, amount: buyAmount });
           }}
-          disabled={!canBuy || buyAmount < 1}
-          title={canBuy ? undefined : `Custo: ● ${formatNumber(displayCost)} · ▲ ${ticketsRequired}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`}
+          disabled={!canClickBuy}
+          title={!showAsUnaffordable ? undefined : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`}
           className="absolute inset-0 rounded-md outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
           aria-label="Comprar gerador"
         />

@@ -10,6 +10,12 @@ export function getCurrentMilestoneCount(quantity: Decimal): number {
   return Math.max(0, Math.floor(log10));
 }
 
+/** Próximo marco (10, 100, 1k, ...) a partir da quantidade atual. Ex.: 47 → 100, 0 → 10. */
+export function getNextMilestoneFromQuantity(quantity: Decimal): Decimal {
+  const count = getCurrentMilestoneCount(quantity);
+  return Decimal.pow(TEN, count + 1);
+}
+
 /** Progresso 0..1 em direção ao próximo marco (após o último já resgatado). */
 export function getProgressToNextMilestone(
   quantity: Decimal,

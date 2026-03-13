@@ -47,10 +47,10 @@ export function getTicketTradeThreshold(index: number): Decimal {
   return Decimal.fromNumber(5).mul(Decimal.pow(Decimal.fromNumber(10), exp));
 }
 
-/** Tickets por segundo = 1 + ranque ◆ + trocas de recurso base. */
-export function getTicketsPerSecond(
+/** Produção base de ▲/s = 1 + ranque ◆ + trocas de recurso base. */
+function getTicketProductionBase(
   upgradeTicketRateRank: number,
-  ticketTradeMilestoneCount: number = 0
+  ticketTradeMilestoneCount: number
 ): number {
   return (
     1 +
@@ -59,11 +59,27 @@ export function getTicketsPerSecond(
   );
 }
 
+/** Tickets por segundo = produção base × 2^multiplierRank (a melhoria "dobrar" multiplica a base). */
+export function getTicketsPerSecond(
+  upgradeTicketRateRank: number,
+  ticketTradeMilestoneCount: number = 0,
+  upgradeTicketMultiplierRank: number = 0
+): number {
+  const base = getTicketProductionBase(upgradeTicketRateRank, ticketTradeMilestoneCount);
+  const mult = 2 ** Math.max(0, upgradeTicketMultiplierRank);
+  return base * mult;
+}
+
 /** Custo em ◆ para o próximo ranque da melhoria "tickets por segundo" (ranques infinitos). */
 export function getUpgradeCostTicketRate(currentRank: number): Decimal {
   return Decimal.fromNumber(10).mul(
     Decimal.pow(Decimal.fromNumber(2), currentRank)
   );
+}
+
+/** Custo em ◆ para o próximo ranque da melhoria "dobrar produção de ▲/s". Base 1, dobra por ranque (1, 2, 4, 8…). */
+export function getUpgradeCostTicketMultiplier(currentRank: number): Decimal {
+  return Decimal.fromNumber(2 ** currentRank);
 }
 
 /** Custo efetivo para comprar gerador (cada ranque global reduz pela metade). */

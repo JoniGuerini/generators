@@ -18,6 +18,7 @@ import {
   getUpgradeCostGeneratorCostHalf,
   getTicketsPerSecond,
   getUpgradeCostTicketRate,
+  getUpgradeCostTicketMultiplier,
   getTicketTradeThreshold,
 } from "@/engine/upgrades";
 
@@ -27,6 +28,7 @@ export type GameAction =
   | { type: "CLAIM_MILESTONES"; id: GeneratorId }
   | { type: "BUY_UPGRADE"; id: GeneratorId; upgradeType: "cycleSpeed" | "production" }
   | { type: "BUY_TICKET_RATE_UPGRADE" }
+  | { type: "BUY_TICKET_MULTIPLIER_UPGRADE" }
   | { type: "TRADE_BASE_FOR_TICKET_RATE" }
   | { type: "BUY_GENERATOR_COST_HALF_UPGRADE" }
   | { type: "RESET_GAME" }
@@ -81,7 +83,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (hasAnyGenerator) {
         const ticketsPerSec = getTicketsPerSecond(
           state.upgradeTicketRateRank,
-          state.ticketTradeMilestoneCount
+          state.ticketTradeMilestoneCount,
+          state.upgradeTicketMultiplierRank
         );
         const acc = ticketAccumulator + deltaSec;
         const wholeSeconds = Math.floor(acc);
@@ -222,6 +225,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         milestoneCurrency: state.milestoneCurrency.sub(cost),
         upgradeTicketRateRank: state.upgradeTicketRateRank + 1,
+      };
+    }
+
+    case "BUY_TICKET_MULTIPLIER_UPGRADE": {
+      const cost = getUpgradeCostTicketMultiplier(state.upgradeTicketMultiplierRank);
+      if (state.milestoneCurrency.lt(cost)) return state;
+      return {
+        ...state,
+        milestoneCurrency: state.milestoneCurrency.sub(cost),
+        upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank + 1,
       };
     }
 

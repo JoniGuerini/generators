@@ -1,18 +1,20 @@
-import { useState } from "react";
 import { useGameState, useGameDispatch } from "@/store/useGameStore";
 import { useFPS } from "@/hooks/useFPS";
 import { formatNumber } from "@/utils/format";
 import { BuyModeSelect } from "./BuyModeSelect";
-import { UpgradesModal } from "./UpgradesModal";
+import type { MainView } from "./GameScreen";
 
-export function Header() {
+interface HeaderProps {
+  currentView: MainView;
+  onNavigate: (view: MainView) => void;
+}
+
+export function Header({ currentView, onNavigate }: HeaderProps) {
   const state = useGameState();
   const dispatch = useGameDispatch();
   const fps = useFPS();
-  const [showUpgrades, setShowUpgrades] = useState(false);
   return (
-    <>
-      <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-zinc-700/80 bg-zinc-800 px-2 py-2 shadow">
+    <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-zinc-700/80 bg-zinc-800 px-2 py-2 shadow">
         <div className="flex items-center gap-2">
           <div
             className="flex h-10 w-[8rem] items-center gap-2 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 shadow-sm"
@@ -61,10 +63,10 @@ export function Header() {
         </span>
         <button
           type="button"
-          onClick={() => setShowUpgrades(true)}
+          onClick={() => onNavigate(currentView === "game" ? "upgrades" : "game")}
           className="flex h-[40px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-3 text-sm text-zinc-200 transition hover:bg-zinc-600"
         >
-          Melhorias
+          {currentView === "game" ? "Melhorias" : "Voltar"}
         </button>
         <button
           type="button"
@@ -75,9 +77,5 @@ export function Header() {
         </button>
       </div>
     </header>
-      {showUpgrades && (
-        <UpgradesModal onClose={() => setShowUpgrades(false)} />
-      )}
-    </>
   );
 }

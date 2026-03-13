@@ -8,6 +8,7 @@ const OPTIONS: { value: BuyMode; label: string }[] = [
   { value: "10%", label: "10%" },
   { value: "50%", label: "50%" },
   { value: "100%", label: "100%" },
+  { value: "marco", label: "Marco" },
 ];
 
 export function BuyModeSelect() {
@@ -29,11 +30,11 @@ export function BuyModeSelect() {
   const currentLabel = OPTIONS.find((o) => o.value === buyMode)?.label ?? buyMode;
 
   return (
-    <div className="relative inline-block" ref={containerRef}>
+    <div className="relative inline-block min-w-[6rem]" ref={containerRef}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="header-buy-select flex h-[40px] w-full min-w-0 items-center rounded-md border border-zinc-600 bg-zinc-700 pl-3 text-left text-sm text-zinc-200 transition hover:bg-zinc-600 focus:outline-none focus:ring-0"
+        className="header-buy-select flex h-[40px] w-full min-w-0 items-center justify-between gap-2 rounded-md border border-zinc-600 bg-zinc-700 px-3 text-left text-sm text-zinc-200 transition hover:bg-zinc-600 focus:outline-none focus:ring-0"
         aria-label="Quantidade a comprar por clique"
         aria-expanded={open}
         aria-haspopup="listbox"

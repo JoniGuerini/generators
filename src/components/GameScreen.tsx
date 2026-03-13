@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useGameLoop } from "@/hooks/useGameLoop";
 import { usePersist } from "@/hooks/usePersist";
+import { useWakeLock } from "@/hooks/useWakeLock";
 import { BuyModeProvider } from "@/contexts/BuyModeContext";
 import { useGameState, useGameDispatch } from "@/store/useGameStore";
 import {
@@ -10,7 +11,10 @@ import {
 import type { OfflineGains } from "@/engine/offlineProgress";
 import { Header } from "./Header";
 import { GeneratorList } from "./GeneratorList";
+import { UpgradesPage } from "./UpgradesPage";
 import { OfflineWelcomeCard } from "./OfflineWelcomeCard";
+
+export type MainView = "game" | "upgrades";
 
 let pendingOfflineGains: OfflineGains | null = null;
 let initialLoadTimestamp: number | null = null;
@@ -38,8 +42,10 @@ function runOfflineCheck(
 export function GameScreen() {
   useGameLoop();
   usePersist();
+  useWakeLock();
   const state = useGameState();
   const dispatch = useGameDispatch();
+  const [view, setView] = useState<MainView>("game");
   const [offlineGains, setOfflineGains] = useState<OfflineGains | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -74,9 +80,15 @@ export function GameScreen() {
   return (
     <BuyModeProvider>
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-zinc-800 text-zinc-100">
-        <Header />
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-2">
-          <GeneratorList />
+        <Header currentView={view} onNavigate={setView} />
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-2 py-2">
+          {view === "game" ? (
+            <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">
+              <GeneratorList />
+            </div>
+          ) : (
+            <UpgradesPage />
+          )}
         </main>
       </div>
       {offlineGains && (

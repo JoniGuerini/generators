@@ -32,6 +32,8 @@ export interface GameState {
   upgradeTicketRateRank: number;
   /** Quantas vezes trocou recurso base por +1 ▲/s (marcos 500, 5k, 5M, 5B, …). */
   ticketTradeMilestoneCount: number;
+  /** Ranque da melhoria "dobrar produção de ▲/s": multiplica a produção base por 2^rank (infinitos ranques). */
+  upgradeTicketMultiplierRank: number;
   /** Ranque da melhoria global "reduzir custo de compra pela metade" (0 = sem; cada ranque ÷2 no custo). */
   upgradeGeneratorCostHalfRank: number;
   generators: GeneratorState[];
@@ -78,6 +80,7 @@ export function getInitialState(): GameState {
     milestoneCurrency: ZERO,
     upgradeTicketRateRank: 0,
     ticketTradeMilestoneCount: 0,
+    upgradeTicketMultiplierRank: 0,
     upgradeGeneratorCostHalfRank: 0,
     generators: GENERATOR_IDS.map((id) => initialGeneratorState(id)),
     lastUpdateTimestamp: Date.now(),

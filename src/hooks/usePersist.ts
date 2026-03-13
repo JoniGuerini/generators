@@ -16,6 +16,7 @@ interface SavedState {
   milestoneCurrency?: string;
   upgradeTicketRateRank?: number;
   ticketTradeMilestoneCount?: number;
+  upgradeTicketMultiplierRank?: number;
   upgradeGeneratorCostHalfRank?: number;
   generators: {
     id: string;
@@ -40,6 +41,7 @@ function serialize(state: GameState): string {
     milestoneCurrency: state.milestoneCurrency.toString(),
     upgradeTicketRateRank: state.upgradeTicketRateRank,
     ticketTradeMilestoneCount: state.ticketTradeMilestoneCount,
+    upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank,
     upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
     generators: state.generators.map((g) => ({
       id: g.id,
@@ -103,6 +105,7 @@ function deserialize(raw: string): GameState | null {
       milestoneCurrency: Decimal.fromString(saved.milestoneCurrency ?? "0"),
       upgradeTicketRateRank: Number(saved.upgradeTicketRateRank) || 0,
       ticketTradeMilestoneCount: Number(saved.ticketTradeMilestoneCount) || 0,
+      upgradeTicketMultiplierRank: Number(saved.upgradeTicketMultiplierRank) || 0,
       upgradeGeneratorCostHalfRank: Number(saved.upgradeGeneratorCostHalfRank) || 0,
       generators,
       lastUpdateTimestamp: saved.lastUpdateTimestamp ?? Date.now(),

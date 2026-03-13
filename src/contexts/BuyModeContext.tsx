@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-export type BuyMode = "1x" | "1%" | "10%" | "50%" | "100%";
+export type BuyMode = "1x" | "1%" | "10%" | "50%" | "100%" | "marco";
 
 const BuyModeContext = createContext<
   { buyMode: BuyMode; setBuyMode: (m: BuyMode) => void } | null

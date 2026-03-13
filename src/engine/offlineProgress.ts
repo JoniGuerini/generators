@@ -79,7 +79,8 @@ export function simulateOfflineProgress(
   if (hasAnyGenerator) {
     const ticketsPerSec = getTicketsPerSecond(
       state.upgradeTicketRateRank,
-      state.ticketTradeMilestoneCount
+      state.ticketTradeMilestoneCount,
+      state.upgradeTicketMultiplierRank
     );
     const acc = ticketAccumulator + deltaSec;
     const wholeSeconds = Math.floor(acc);

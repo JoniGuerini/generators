@@ -5,7 +5,7 @@ import { GeneratorRow } from "./GeneratorRow";
 export function GeneratorList() {
   const visibleIds = useGameSelector(getVisibleGeneratorIds, (a, b) => a.join() === b.join());
   return (
-    <ul className="flex min-w-0 flex-col gap-3">
+    <ul className="flex min-w-0 flex-col gap-3 pt-2.5">
       {visibleIds.map((id) => (
         <li key={id}>
           <GeneratorRow id={id} />

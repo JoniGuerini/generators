@@ -67,30 +67,29 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         );
         
         let progress = gen.cycleProgress + deltaSec / cycleTimeSec;
-        if (progress >= 1) {
+        const cyclesCompleted = Math.floor(progress);
+        let cycleStartTime = gen.cycleStartTime;
+
+        if (cyclesCompleted >= 1) {
           generatorsChanged = true;
-          const cyclesCompleted = Math.floor(progress);
-          const progressRemainder = progress - cyclesCompleted;
+          progress -= cyclesCompleted;
           const produced = productionPerCycle.mul(gen.quantity).mul(cyclesCompleted);
-          
+
           if (def.produces === "base") {
             baseResource = baseResource.add(produced);
           } else {
             const currentDelta = deltasMap.get(def.produces) || Decimal.dZero;
             deltasMap.set(def.produces, currentDelta.add(produced));
           }
-          
+
           const cycleTimeMs = cycleTimeSec * 1000;
-          const cycleStartTime = now - progressRemainder * cycleTimeMs;
-          return { ...gen, cycleProgress: progressRemainder, cycleStartTime };
+          cycleStartTime = now - progress * cycleTimeMs;
+        } else if (progress !== gen.cycleProgress) {
+          /* Acumula progresso entre ticks; sem isso o ciclo nunca completa (sempre resetava). */
+          generatorsChanged = true;
         }
-        
-        // Progress changed but no cycle finished. 
-        // We only update if significant enough or if we want to be perfectly accurate.
-        // Actually, we MUST update cycleProgress for the bars to work if they were 
-        // using it, but they use RAF + cycleStartTime.
-        // So we only update if cyclesCompleted >= 1.
-        return gen;
+
+        return { ...gen, cycleProgress: progress, cycleStartTime };
       });
 
       const hasAnyGenerator = state.generators.some((g) =>

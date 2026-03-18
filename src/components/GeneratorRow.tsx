@@ -48,6 +48,23 @@ interface GeneratorRowProps {
   id: GeneratorId;
 }
 
+/** Igualdade ignorando cycleProgress — o RAF da barra não precisa de re-render a cada TICK. */
+function genEqualIgnoreCycleProgress(
+  a: import("@/store/gameState").GeneratorState,
+  b: import("@/store/gameState").GeneratorState
+): boolean {
+  return (
+    a.id === b.id &&
+    a.quantity.equals(b.quantity) &&
+    a.cycleStartTime === b.cycleStartTime &&
+    a.everOwned === b.everOwned &&
+    a.claimedMilestoneIndex === b.claimedMilestoneIndex &&
+    a.currentMilestoneTargetIndex === b.currentMilestoneTargetIndex &&
+    a.upgradeCycleSpeedRank === b.upgradeCycleSpeedRank &&
+    a.upgradeProductionRank === b.upgradeProductionRank
+  );
+}
+
 const TOOLTIP_ESTIMATED_WIDTH = 180;
 const TOOLTIP_GAP = 6;
 
@@ -56,7 +73,6 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const { buyMode } = useBuyMode();
   const {
     gen,
-    cycleStartTime,
     baseResource,
     ticketCurrency,
     upgradeGeneratorCostHalfRank,
@@ -94,7 +110,6 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
 
     return {
       gen: generator,
-      cycleStartTime: generator.cycleStartTime,
       baseResource,
       ticketCurrency,
       upgradeGeneratorCostHalfRank,
@@ -102,16 +117,20 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       canBuy,
       maxAffordable,
     };
-  }, (a, b) => 
-    a.gen === b.gen &&
-    a.cycleStartTime === b.cycleStartTime &&
-    a.baseResource.equals(b.baseResource) &&
-    a.ticketCurrency.equals(b.ticketCurrency) &&
-    a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
-    a.canBuy === b.canBuy &&
-    a.maxAffordable.equals(b.maxAffordable) &&
-    (a.prevGenQuantity && b.prevGenQuantity ? a.prevGenQuantity.equals(b.prevGenQuantity) : a.prevGenQuantity === b.prevGenQuantity)
-  );
+  }, (a, b) => {
+    if (!a.gen || !b.gen) return a.gen === b.gen;
+    return (
+      genEqualIgnoreCycleProgress(a.gen, b.gen) &&
+      a.baseResource.equals(b.baseResource) &&
+      a.ticketCurrency.equals(b.ticketCurrency) &&
+      a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
+      a.canBuy === b.canBuy &&
+      a.maxAffordable.equals(b.maxAffordable) &&
+      (a.prevGenQuantity && b.prevGenQuantity
+        ? a.prevGenQuantity.equals(b.prevGenQuantity)
+        : a.prevGenQuantity === b.prevGenQuantity)
+    );
+  });
   const dispatch = useGameDispatch();
   const milestoneTriggerRef = useRef<HTMLDivElement>(null);
   const buyTriggerRef = useRef<HTMLDivElement>(null);
@@ -126,6 +145,17 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     setSide(spaceRight >= TOOLTIP_ESTIMATED_WIDTH ? "right" : "left");
   }, []);
 
+  const cycleTimeSecForBar = gen
+    ? getEffectiveCycleTimeSeconds(def.cycleTimeSeconds, gen.upgradeCycleSpeedRank)
+    : 1;
+  const showCycleTime = cycleTimeSecForBar >= 1;
+  const hasQuantityForBar = gen ? Decimal.gt(gen.quantity, Decimal.dZero) : false;
+  const progressBarRef = useSmoothCycleProgress(
+    gen?.cycleStartTime ?? 0,
+    cycleTimeSecForBar,
+    !!gen && showCycleTime && hasQuantityForBar
+  );
+
   if (!gen) return null;
 
   const quantity = gen.quantity;
@@ -137,11 +167,6 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const productionPerCycle = getEffectiveProductionPerCycle(
     def.productionPerCycle,
     gen.upgradeProductionRank
-  );
-  const progressBarRef = useSmoothCycleProgress(
-    cycleStartTime,
-    cycleTimeSec,
-    hasQuantity
   );
   const effectiveCost = getEffectiveGeneratorCost(
     def.cost,
@@ -158,7 +183,6 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       return prevGenQuantity ? Decimal.gte(prevGenQuantity, effectiveCostPrev) : false;
     })();
   const producedPerCycle = productionPerCycle.mul(quantity);
-  const showCycleTime = cycleTimeSec >= 1;
   const producedPerSecond =
     cycleTimeSec > 0 ? producedPerCycle.div(cycleTimeSec) : Decimal.dZero;
   const buyAmount = getBuyAmount(buyMode, maxAffordable, quantity);
@@ -385,12 +409,11 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
         <div className="relative h-[40px] w-full overflow-hidden rounded-md bg-black">
           <div
             ref={showCycleTime ? progressBarRef : undefined}
-            className={`absolute inset-y-0 left-0 rounded-md will-change-[width] ${
-              showCycleTime ? "bg-zinc-600" : "bg-green-600"
+            className={`absolute inset-y-0 left-0 w-full origin-left rounded-md ${
+              showCycleTime
+                ? "bg-zinc-600 [transform:translateZ(0)] [backface-visibility:hidden]"
+                : "scale-x-100 bg-green-600"
             }`}
-            style={{
-              width: showCycleTime ? undefined : "100%",
-            }}
           />
           {showCycleTime && (
             <div className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center">

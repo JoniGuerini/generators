@@ -70,16 +70,14 @@ export function getTicketsPerSecond(
   return base * mult;
 }
 
-/** Custo em ◆ para o próximo ranque da melhoria "tickets por segundo" (ranques infinitos). */
+/** Custo em ◆ para o próximo ranque da melhoria "tickets por segundo": 1, 2, 4, 8… (dobra por ranque). */
 export function getUpgradeCostTicketRate(currentRank: number): Decimal {
-  return Decimal.fromNumber(10).mul(
-    Decimal.pow(Decimal.fromNumber(2), currentRank)
-  );
+  return Decimal.pow(Decimal.fromNumber(2), Math.max(0, currentRank));
 }
 
-/** Custo em ◆ para o próximo ranque da melhoria "dobrar produção de ▲/s". Base 1, dobra por ranque (1, 2, 4, 8…). */
+/** Custo em ◆ para "dobrar produção de ▲/s": 1, 4, 16, 64… (quadruplica por ranque). */
 export function getUpgradeCostTicketMultiplier(currentRank: number): Decimal {
-  return Decimal.fromNumber(2 ** currentRank);
+  return Decimal.pow(Decimal.fromNumber(4), Math.max(0, currentRank));
 }
 
 /** Custo efetivo para comprar gerador (cada ranque global reduz pela metade). */

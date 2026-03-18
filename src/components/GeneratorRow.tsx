@@ -18,31 +18,8 @@ import {
   getNextMilestoneFromQuantity,
   getCoinsFromClaiming,
 } from "@/utils/milestones";
-import type { BuyMode } from "@/contexts/BuyModeContext";
-
-function getBuyAmount(mode: BuyMode, maxAffordable: Decimal, quantity?: Decimal): number {
-  if (mode === "1x") return 1;
-  if (mode === "marco") {
-    if (quantity == null) return maxAffordable.gte(Decimal.dOne) ? 1 : 0;
-    const nextMarco = getNextMilestoneFromQuantity(quantity);
-    const toBuyDecimal = nextMarco.sub(quantity).floor();
-    if (toBuyDecimal.lt(Decimal.dZero)) return maxAffordable.gte(Decimal.dOne) ? 1 : 0;
-    const toBuy = Decimal.min(toBuyDecimal, maxAffordable);
-    const n = toBuy.toNumber();
-    if (!Number.isFinite(n) || n < 0) return 0;
-    const amount = Math.min(n, Number.MAX_SAFE_INTEGER);
-    if (amount === 0 && Decimal.gte(maxAffordable, Decimal.dOne)) return 1;
-    return amount;
-  }
-  const pct = mode === "1%" ? 0.01 : mode === "10%" ? 0.1 : mode === "50%" ? 0.5 : 1;
-  const toBuyDecimal = maxAffordable.mul(pct).floor();
-  const n = toBuyDecimal.toNumber();
-  if (!Number.isFinite(n) || n < 0) return 0;
-  const amount = Math.min(n, Number.MAX_SAFE_INTEGER);
-  // Em modos %, se o cálculo deu 0 mas dá pra comprar pelo menos 1, comprar 1
-  if (amount === 0 && Decimal.gte(maxAffordable, Decimal.dOne)) return 1;
-  return amount;
-}
+import { getBuyAmount } from "@/utils/computeGeneratorPurchase";
+import { useHoldToBuyGenerator } from "@/hooks/useHoldToBuyGenerator";
 
 interface GeneratorRowProps {
   id: GeneratorId;
@@ -132,6 +109,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     );
   });
   const dispatch = useGameDispatch();
+  const holdBuy = useHoldToBuyGenerator(id);
   const milestoneTriggerRef = useRef<HTMLDivElement>(null);
   const buyTriggerRef = useRef<HTMLDivElement>(null);
   const [milestoneTooltipSide, setMilestoneTooltipSide] = useState<"left" | "right">("right");
@@ -309,12 +287,18 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
           </span>
           <button
             type="button"
-            onClick={() => {
-              if (canClickBuy && buyAmount >= 1) dispatch({ type: "BUY_GENERATOR", id, amount: buyAmount });
-            }}
+            onPointerDown={holdBuy.onPointerDown}
+            onPointerUp={holdBuy.onPointerUp}
+            onPointerCancel={holdBuy.onPointerCancel}
+            onLostPointerCapture={holdBuy.onLostPointerCapture}
+            onKeyDown={holdBuy.onKeyDown}
             disabled={!canClickBuy}
-            title={!showAsUnaffordable ? undefined : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`}
-            className="absolute inset-0 rounded-md outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-0"
+            title={
+              !showAsUnaffordable
+                ? "Clique ou segure para comprar em série"
+                : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`
+            }
+            className="absolute inset-0 touch-manipulation rounded-md outline-none select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-0"
             aria-label="Comprar gerador para desbloquear"
           />
         </div>
@@ -513,12 +497,18 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
         </span>
         <button
           type="button"
-          onClick={() => {
-            if (canClickBuy && buyAmount >= 1) dispatch({ type: "BUY_GENERATOR", id, amount: buyAmount });
-          }}
+          onPointerDown={holdBuy.onPointerDown}
+          onPointerUp={holdBuy.onPointerUp}
+          onPointerCancel={holdBuy.onPointerCancel}
+          onLostPointerCapture={holdBuy.onLostPointerCapture}
+          onKeyDown={holdBuy.onKeyDown}
           disabled={!canClickBuy}
-          title={!showAsUnaffordable ? undefined : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`}
-          className="absolute inset-0 rounded-md outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+          title={
+            !showAsUnaffordable
+              ? "Clique ou segure para comprar em série"
+              : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`
+          }
+          className="absolute inset-0 touch-manipulation rounded-md outline-none select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
           aria-label="Comprar gerador"
         />
       </div>

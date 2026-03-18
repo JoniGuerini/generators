@@ -72,11 +72,11 @@ export function DocumentationPage() {
             </div>
             <div className="rounded border border-zinc-700 bg-zinc-800 p-3">
               <h4 className="font-bold text-zinc-200">Ganho de Tickets (+1/s)</h4>
-              <p className="text-sm text-zinc-400">Melhoria Global. Adiciona +1 a geração base de Tickets ▲ por segundo. O custo em ◆ cresce na base 10 * 2^nivel (10, 20, 40, 80...). Níveis Infinitos.</p>
+              <p className="text-sm text-zinc-400">Melhoria Global. Adiciona +1 a geração base de Tickets ▲ por segundo. Custo em ◆: 1, 2, 4, 8… (dobra a cada ranque). Níveis infinitos.</p>
             </div>
             <div className="rounded border border-zinc-700 bg-zinc-800 p-3">
               <h4 className="font-bold text-zinc-200">Multiplicar Tickets (x2)</h4>
-              <p className="text-sm text-zinc-400">Melhoria Global. Dobra todo o resultado final do seu ganho de Tickets ▲ por segundo. O custo deforma logarítmico (1, 2, 4, 8...). Níveis infinitos.</p>
+              <p className="text-sm text-zinc-400">Melhoria Global. Dobra todo o ganho de Tickets ▲ por segundo. Custo em ◆: 1, 4, 16, 64… (quadruplica a cada ranque). Níveis infinitos.</p>
             </div>
             <div className="rounded border border-zinc-700 bg-zinc-800 p-3 md:col-span-2">
               <h4 className="font-bold text-zinc-200">Mitade dos Custos</h4>

@@ -180,12 +180,6 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     def.costPreviousGenerator,
     upgradeGeneratorCostHalfRank
   );
-  const hasEnoughPrev =
-    effectiveCostPrev.lte(Decimal.dZero) ||
-    def.produces === "base" ||
-    (() => {
-      return prevGenQuantity ? Decimal.gte(prevGenQuantity, effectiveCostPrev) : false;
-    })();
   const producedPerCycle = productionPerCycle.mul(quantity);
   const producedPerSecond =
     cycleTimeSec > 0 ? producedPerCycle.div(cycleTimeSec) : Decimal.dZero;

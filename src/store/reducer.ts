@@ -20,6 +20,13 @@ import {
   getUpgradeCostTicketRate,
   getUpgradeCostTicketMultiplier,
   getTicketTradeThreshold,
+  getUpgradeCostMilestoneDoubler,
+  getMilestoneRewardMultiplier,
+  getCritChance,
+  getCritMultiplier,
+  getUpgradeCostCritChance,
+  getUpgradeCostCritMultiplier,
+  MAX_CRIT_CHANCE_RANK,
 } from "@/engine/upgrades";
 
 export type GameAction =
@@ -27,11 +34,12 @@ export type GameAction =
   | { type: "BUY_GENERATOR"; id: GeneratorId; amount: number }
   | { type: "CLAIM_MILESTONES"; id: GeneratorId }
   | { type: "CLAIM_ALL_MILESTONES" }
-  | { type: "BUY_UPGRADE"; id: GeneratorId; upgradeType: "cycleSpeed" | "production" }
+  | { type: "BUY_UPGRADE"; id: GeneratorId; upgradeType: "cycleSpeed" | "production" | "critChance" | "critMultiplier" }
   | { type: "BUY_TICKET_RATE_UPGRADE" }
   | { type: "BUY_TICKET_MULTIPLIER_UPGRADE" }
   | { type: "TRADE_BASE_FOR_TICKET_RATE" }
   | { type: "BUY_GENERATOR_COST_HALF_UPGRADE" }
+  | { type: "BUY_MILESTONE_DOUBLER_UPGRADE" }
   | { type: "TOGGLE_FPS" }
   | { type: "RESET_OPTIONS" }
   | { type: "RESET_GAME" }
@@ -70,7 +78,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         if (cyclesCompleted >= 1) {
           generatorsChanged = true;
           progress -= cyclesCompleted;
-          const produced = productionPerCycle.mul(gen.quantity).mul(cyclesCompleted);
+
+          const critChance = getCritChance(gen.upgradeCritChanceRank);
+          let produced: Decimal;
+          if (critChance > 0) {
+            const critMult = getCritMultiplier(gen.upgradeCritMultiplierRank);
+            let critCount = 0;
+            for (let c = 0; c < cyclesCompleted; c++) {
+              if (Math.random() < critChance) critCount++;
+            }
+            const normalCycles = cyclesCompleted - critCount;
+            produced = productionPerCycle.mul(gen.quantity).mul(normalCycles + critCount * critMult);
+          } else {
+            produced = productionPerCycle.mul(gen.quantity).mul(cyclesCompleted);
+          }
 
           if (def.produces === "base") {
             baseResource = baseResource.add(produced);
@@ -135,11 +156,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       let prestigePoints = state.prestigePoints;
       let prestigeThresholdsClaimed = state.prestigeThresholdsClaimed;
       const currentDecillions = baseResource.div(PRESTIGE_THRESHOLD).floor();
-      const newCount = Math.min(currentDecillions.toNumber(), Number.MAX_SAFE_INTEGER);
-      if (Number.isFinite(newCount) && newCount > prestigeThresholdsClaimed) {
-        const earned = newCount - prestigeThresholdsClaimed;
-        prestigePoints = prestigePoints.add(Decimal.fromNumber(earned));
-        prestigeThresholdsClaimed = newCount;
+      if (currentDecillions.gt(prestigeThresholdsClaimed)) {
+        const earned = currentDecillions.sub(prestigeThresholdsClaimed);
+        prestigePoints = prestigePoints.add(earned);
+        prestigeThresholdsClaimed = currentDecillions;
       }
 
       return {
@@ -252,15 +272,44 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         };
       }
 
-      const cost = getUpgradeCostProduction(generatorNumber, gen.upgradeProductionRank);
-      if (state.milestoneCurrency.lt(cost)) return state;
-      return {
-        ...state,
-        milestoneCurrency: state.milestoneCurrency.sub(cost),
-        generators: state.generators.map((g, i) =>
-          i === genIndex ? { ...g, upgradeProductionRank: g.upgradeProductionRank + 1 } : g
-        ),
-      };
+      if (action.upgradeType === "production") {
+        const cost = getUpgradeCostProduction(generatorNumber, gen.upgradeProductionRank);
+        if (state.milestoneCurrency.lt(cost)) return state;
+        return {
+          ...state,
+          milestoneCurrency: state.milestoneCurrency.sub(cost),
+          generators: state.generators.map((g, i) =>
+            i === genIndex ? { ...g, upgradeProductionRank: g.upgradeProductionRank + 1 } : g
+          ),
+        };
+      }
+
+      if (action.upgradeType === "critChance") {
+        if (gen.upgradeCritChanceRank >= MAX_CRIT_CHANCE_RANK) return state;
+        const cost = getUpgradeCostCritChance(generatorNumber, gen.upgradeCritChanceRank);
+        if (state.milestoneCurrency.lt(cost)) return state;
+        return {
+          ...state,
+          milestoneCurrency: state.milestoneCurrency.sub(cost),
+          generators: state.generators.map((g, i) =>
+            i === genIndex ? { ...g, upgradeCritChanceRank: g.upgradeCritChanceRank + 1 } : g
+          ),
+        };
+      }
+
+      if (action.upgradeType === "critMultiplier") {
+        const cost = getUpgradeCostCritMultiplier(generatorNumber, gen.upgradeCritMultiplierRank);
+        if (state.milestoneCurrency.lt(cost)) return state;
+        return {
+          ...state,
+          milestoneCurrency: state.milestoneCurrency.sub(cost),
+          generators: state.generators.map((g, i) =>
+            i === genIndex ? { ...g, upgradeCritMultiplierRank: g.upgradeCritMultiplierRank + 1 } : g
+          ),
+        };
+      }
+
+      return state;
     }
 
     case "BUY_TICKET_RATE_UPGRADE": {
@@ -293,6 +342,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case "BUY_MILESTONE_DOUBLER_UPGRADE": {
+      const cost = getUpgradeCostMilestoneDoubler(state.upgradeMilestoneDoublerRank);
+      if (state.milestoneCurrency.lt(cost)) return state;
+      return {
+        ...state,
+        milestoneCurrency: state.milestoneCurrency.sub(cost),
+        upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank + 1,
+      };
+    }
+
     case "TRADE_BASE_FOR_TICKET_RATE": {
       const cost = getTicketTradeThreshold(state.ticketTradeMilestoneCount);
       if (state.baseResource.lt(cost)) return state;
@@ -311,7 +370,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const claimed = gen.claimedMilestoneIndex;
       if (currentCount <= claimed) return state;
       const generatorNumber = parseInt(gen.id.replace("generator", ""), 10);
-      const coins = getCoinsFromClaiming(generatorNumber, claimed, currentCount);
+      const baseCoins = getCoinsFromClaiming(generatorNumber, claimed, currentCount);
+      const mult = getMilestoneRewardMultiplier(state.upgradeMilestoneDoublerRank);
+      const coins = mult > 1 ? baseCoins.mul(mult) : baseCoins;
       return {
         ...state,
         milestoneCurrency: state.milestoneCurrency.add(coins),
@@ -322,6 +383,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "CLAIM_ALL_MILESTONES": {
+      const milestoneMultiplier = getMilestoneRewardMultiplier(state.upgradeMilestoneDoublerRank);
       let totalCoins = Decimal.dZero;
       const updatedGens = state.generators.map((gen) => {
         const currentCount = getCurrentMilestoneCount(gen.quantity);
@@ -333,9 +395,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         return { ...gen, claimedMilestoneIndex: currentCount };
       });
       if (totalCoins.lte(Decimal.dZero)) return state;
+      const finalCoins = milestoneMultiplier > 1 ? totalCoins.mul(milestoneMultiplier) : totalCoins;
       return {
         ...state,
-        milestoneCurrency: state.milestoneCurrency.add(totalCoins),
+        milestoneCurrency: state.milestoneCurrency.add(finalCoins),
         generators: updatedGens,
       };
     }

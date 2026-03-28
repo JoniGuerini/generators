@@ -93,3 +93,36 @@ export function getEffectiveGeneratorCost(
 export function getUpgradeCostGeneratorCostHalf(currentRank: number): Decimal {
   return Decimal.pow(Decimal.fromNumber(2), Math.max(0, currentRank));
 }
+
+/** Máximo de ranques da melhoria "chance de crítico": 40 ranques = 100%. */
+export const MAX_CRIT_CHANCE_RANK = 40;
+
+/** Chance de crítico: rank × 2.5% (0–100%). */
+export function getCritChance(rank: number): number {
+  return Math.min(1, Math.max(0, rank) * 0.025);
+}
+
+/** Multiplicador de crítico: 2 + rank × 2 (×2, ×4, ×6, ×8…). */
+export function getCritMultiplier(rank: number): number {
+  return 2 + Math.max(0, rank) * 2;
+}
+
+/** Custo em ◆ para "chance de crítico": 1, 2, 4, 8… (dobra por ranque). */
+export function getUpgradeCostCritChance(_generatorNumber: number, currentRank: number): Decimal {
+  return Decimal.fromNumber(2 ** currentRank);
+}
+
+/** Custo em ◆ para "eficiência do crítico": 1, 2, 4, 8… (dobra por ranque). */
+export function getUpgradeCostCritMultiplier(_generatorNumber: number, currentRank: number): Decimal {
+  return Decimal.fromNumber(2 ** currentRank);
+}
+
+/** Custo em ◆ para "dobrar ◆ por marco": 2, 8, 32, 128… (quadruplica por ranque, base 2). */
+export function getUpgradeCostMilestoneDoubler(currentRank: number): Decimal {
+  return Decimal.fromNumber(2).mul(Decimal.pow(Decimal.fromNumber(4), Math.max(0, currentRank)));
+}
+
+/** Multiplicador efetivo de ◆ por marco: 2^rank. */
+export function getMilestoneRewardMultiplier(rank: number): number {
+  return 2 ** Math.max(0, rank);
+}

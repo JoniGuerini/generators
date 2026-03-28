@@ -18,8 +18,9 @@ interface SavedState {
   ticketTradeMilestoneCount?: number;
   upgradeTicketMultiplierRank?: number;
   upgradeGeneratorCostHalfRank?: number;
+  upgradeMilestoneDoublerRank?: number;
   prestigePoints?: string;
-  prestigeThresholdsClaimed?: number;
+  prestigeThresholdsClaimed?: string | number;
   generators: {
     id: string;
     quantity: string;
@@ -30,6 +31,8 @@ interface SavedState {
     currentMilestoneTargetIndex?: number;
     upgradeCycleSpeedRank?: number;
     upgradeProductionRank?: number;
+    upgradeCritChanceRank?: number;
+    upgradeCritMultiplierRank?: number;
   }[];
   lastUpdateTimestamp: number;
   options?: { showFPS?: boolean };
@@ -46,8 +49,9 @@ function serialize(state: GameState): string {
     ticketTradeMilestoneCount: state.ticketTradeMilestoneCount,
     upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank,
     upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
+    upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
     prestigePoints: state.prestigePoints.toString(),
-    prestigeThresholdsClaimed: state.prestigeThresholdsClaimed,
+    prestigeThresholdsClaimed: state.prestigeThresholdsClaimed.toString(),
     generators: state.generators.map((g) => ({
       id: g.id,
       quantity: g.quantity.toString(),
@@ -58,6 +62,8 @@ function serialize(state: GameState): string {
       currentMilestoneTargetIndex: g.currentMilestoneTargetIndex,
       upgradeCycleSpeedRank: g.upgradeCycleSpeedRank,
       upgradeProductionRank: g.upgradeProductionRank,
+      upgradeCritChanceRank: g.upgradeCritChanceRank,
+      upgradeCritMultiplierRank: g.upgradeCritMultiplierRank,
     })),
     lastUpdateTimestamp: state.lastUpdateTimestamp,
   };
@@ -86,6 +92,8 @@ function deserialize(raw: string): GameState | null {
             currentMilestoneTargetIndex: Number(g.currentMilestoneTargetIndex) || 0,
             upgradeCycleSpeedRank: Number((g as SavedState["generators"][0]).upgradeCycleSpeedRank) || 0,
             upgradeProductionRank: Number((g as SavedState["generators"][0]).upgradeProductionRank) || 0,
+            upgradeCritChanceRank: Number((g as SavedState["generators"][0]).upgradeCritChanceRank) || 0,
+            upgradeCritMultiplierRank: Number((g as SavedState["generators"][0]).upgradeCritMultiplierRank) || 0,
           },
         ];
       }) ?? []
@@ -101,7 +109,9 @@ function deserialize(raw: string): GameState | null {
           : advanceMilestoneTargetIndex(loaded.quantity, 1);
       const upgCycle = (loaded as { upgradeCycleSpeedRank?: number }).upgradeCycleSpeedRank ?? 0;
       const upgProd = (loaded as { upgradeProductionRank?: number }).upgradeProductionRank ?? 0;
-      return { ...g, ...loaded, claimedMilestoneIndex: claimed, currentMilestoneTargetIndex, upgradeCycleSpeedRank: upgCycle, upgradeProductionRank: upgProd };
+      const upgCritChance = (loaded as { upgradeCritChanceRank?: number }).upgradeCritChanceRank ?? 0;
+      const upgCritMult = (loaded as { upgradeCritMultiplierRank?: number }).upgradeCritMultiplierRank ?? 0;
+      return { ...g, ...loaded, claimedMilestoneIndex: claimed, currentMilestoneTargetIndex, upgradeCycleSpeedRank: upgCycle, upgradeProductionRank: upgProd, upgradeCritChanceRank: upgCritChance, upgradeCritMultiplierRank: upgCritMult };
     });
     return {
       baseResource: Decimal.fromString(saved.baseResource ?? "0"),
@@ -112,8 +122,13 @@ function deserialize(raw: string): GameState | null {
       ticketTradeMilestoneCount: Number(saved.ticketTradeMilestoneCount) || 0,
       upgradeTicketMultiplierRank: Number(saved.upgradeTicketMultiplierRank) || 0,
       upgradeGeneratorCostHalfRank: Number(saved.upgradeGeneratorCostHalfRank) || 0,
+      upgradeMilestoneDoublerRank: Number(saved.upgradeMilestoneDoublerRank) || 0,
       prestigePoints: Decimal.fromString(saved.prestigePoints ?? "0"),
-      prestigeThresholdsClaimed: Number(saved.prestigeThresholdsClaimed) || 0,
+      prestigeThresholdsClaimed: saved.prestigeThresholdsClaimed != null
+        ? (typeof saved.prestigeThresholdsClaimed === "number"
+          ? Decimal.fromNumber(saved.prestigeThresholdsClaimed)
+          : Decimal.fromString(saved.prestigeThresholdsClaimed))
+        : Decimal.dZero,
       generators,
       options: { showFPS: Boolean(saved.options?.showFPS ?? false) },
       lastUpdateTimestamp: saved.lastUpdateTimestamp ?? Date.now(),

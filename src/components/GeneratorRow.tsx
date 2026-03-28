@@ -8,6 +8,7 @@ import {
   getEffectiveCycleTimeSeconds,
   getEffectiveProductionPerCycle,
   getEffectiveGeneratorCost,
+  getMilestoneRewardMultiplier,
 } from "@/engine/upgrades";
 import { formatNumber, formatTime } from "@/utils/format";
 import { useSmoothCycleProgress } from "@/hooks/useSmoothCycleProgress";
@@ -54,6 +55,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     baseResource,
     ticketCurrency,
     upgradeGeneratorCostHalfRank,
+    upgradeMilestoneDoublerRank,
     prevGenQuantity,
     canBuy,
     maxAffordable,
@@ -91,6 +93,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       baseResource,
       ticketCurrency,
       upgradeGeneratorCostHalfRank,
+      upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
       prevGenQuantity,
       canBuy,
       maxAffordable,
@@ -102,6 +105,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       a.baseResource.equals(b.baseResource) &&
       a.ticketCurrency.equals(b.ticketCurrency) &&
       a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
+      a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
       a.canBuy === b.canBuy &&
       a.maxAffordable.equals(b.maxAffordable) &&
       (a.prevGenQuantity && b.prevGenQuantity
@@ -239,12 +243,18 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const ticketsRequired = amountForDisplay >= 1 ? amountForDisplay : 1;
   const lacksBase = baseResource.lt(displayCost);
   const lacksTickets = ticketCurrency.lt(Decimal.fromNumber(ticketsRequired));
-  const lacksPrev = hasPrevCost && !hasEnoughPrev;
+  const lacksPrev = hasPrevCost && (
+    prevGenQuantity
+      ? prevGenQuantity.lt(displayPrevCost)
+      : true
+  );
 
   const currentMilestoneCount = getCurrentMilestoneCount(quantity);
   const pendingMilestones = Math.max(0, currentMilestoneCount - gen.claimedMilestoneIndex);
   const generatorNumber = parseInt(id.replace("generator", ""), 10);
-  const coinsToClaim = getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentMilestoneCount);
+  const baseCoins = getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentMilestoneCount);
+  const milestoneMultiplier = getMilestoneRewardMultiplier(upgradeMilestoneDoublerRank);
+  const coinsToClaim = milestoneMultiplier > 1 ? baseCoins.mul(milestoneMultiplier) : baseCoins;
   const progressToNext = getProgressTowardTarget(quantity, gen.currentMilestoneTargetIndex);
   const nextThreshold = getNextMilestoneThresholdFromTarget(gen.currentMilestoneTargetIndex);
   const canClaim = pendingMilestones > 0;
@@ -444,10 +454,10 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
         <div className="btn-3d--dark relative h-[40px] w-full overflow-hidden rounded-md bg-[#0D0D0D]">
           <div
             ref={showCycleTime ? progressBarRef : undefined}
-            className={`absolute inset-y-0 left-0 w-full origin-left rounded-md ${
+            className={`absolute inset-y-0 left-0 ${
               showCycleTime
-                ? "bg-zinc-600 [transform:translateZ(0)] [backface-visibility:hidden]"
-                : "scale-x-100 bg-green-600"
+                ? "bg-zinc-600"
+                : "w-full bg-green-600"
             }`}
           />
           {showCycleTime && (

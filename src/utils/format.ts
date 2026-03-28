@@ -82,9 +82,7 @@ export function formatNumber(value: Decimal): string {
 
   let digits: string;
   if (num >= 100) digits = Math.floor(num).toString();
-  else if (num >= 10) digits = num.toFixed(1).replace(/\.0$/, "");
-  else if (num >= 1) digits = num.toFixed(2).replace(/\.?0+$/, "");
-  else digits = num.toFixed(2);
+  else digits = num.toFixed(2).replace(/\.?0+$/, "");
 
   let suffix: string;
   if (suffixIndex < LETTER_TIER_START) {

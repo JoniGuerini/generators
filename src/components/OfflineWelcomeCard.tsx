@@ -3,6 +3,7 @@ import type { OfflineGains } from "@/engine/offlineProgress";
 import { formatNumber, formatTime } from "@/utils/format";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { getCurrentMilestoneCount, getCoinsFromClaiming } from "@/utils/milestones";
+import { getMilestoneRewardMultiplier } from "@/engine/upgrades";
 
 interface OfflineWelcomeCardProps {
   gains: OfflineGains;
@@ -30,7 +31,8 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
         getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentCount)
       );
     }
-    return coins;
+    const mult = getMilestoneRewardMultiplier(state.upgradeMilestoneDoublerRank);
+    return mult > 1 ? coins.mul(mult) : coins;
   }, (a, b) => a.equals(b));
 
   const hasPending = totalPending.gt(Decimal.dZero);

@@ -24,7 +24,7 @@ export function useSmoothCycleProgress(
   useLayoutEffect(() => {
     if (!active) {
       const b = barRef.current;
-      if (b) b.style.transform = `scaleX(${Math.min(1, Math.max(0, pausedProgress))})`;
+      if (b) b.style.width = `${Math.min(1, Math.max(0, pausedProgress)) * 100}%`;
       return undefined;
     }
 
@@ -36,7 +36,7 @@ export function useSmoothCycleProgress(
       const elapsed = Date.now() - cycleStartRef.current;
       const phase = ((elapsed % cycleMs) + cycleMs) % cycleMs;
       const p = Math.min(1, phase / cycleMs);
-      node.style.transform = `scaleX(${p})`;
+      node.style.width = `${p * 100}%`;
     };
 
     return registerCycleBarUpdate(update);

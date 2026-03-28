@@ -20,8 +20,8 @@ export function Header() {
   }), shallowEqual);
 
   return (
-    <header className="sticky top-0 z-20 flex items-center bg-[#0D0D0D] px-2 py-3 shadow min-h-[64px]">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2 md:gap-4">
+    <header className="sticky top-0 z-20 relative flex items-center justify-center bg-[#0D0D0D] px-2 py-3 shadow min-h-[64px]">
+      <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
         {/* Recurso base */}
         <div
           className="flex w-[8rem] sm:w-[10rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
@@ -84,10 +84,10 @@ export function Header() {
         </div>
       </div>
 
-      {/* FPS — canto direito, mesmo estilo dos cards */}
+      {/* FPS — canto direito absoluto, não afeta o centro */}
       {showFPS && (
         <div
-          className="ml-2 flex w-[8rem] shrink-0 flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
+          className="absolute right-2 top-1/2 -translate-y-1/2 flex w-[5rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
           title="Frames por segundo"
         >
           <div className="flex items-center gap-1.5">

@@ -18,6 +18,10 @@ export interface GeneratorState {
   upgradeCycleSpeedRank: number;
   /** Ranque da melhoria "dobrar produção por ciclo" (0 = sem melhoria; infinitos ranques). */
   upgradeProductionRank: number;
+  /** Ranque da melhoria "chance de crítico" (0 = sem; cada ranque +2.5%; máx 40 = 100%). */
+  upgradeCritChanceRank: number;
+  /** Ranque da melhoria "eficiência do crítico" (0 = ×2 base; cada ranque +×2). */
+  upgradeCritMultiplierRank: number;
 }
 
 export interface GameState {
@@ -36,10 +40,12 @@ export interface GameState {
   upgradeTicketMultiplierRank: number;
   /** Ranque da melhoria global "reduzir custo de compra pela metade" (0 = sem; cada ranque ÷2 no custo). */
   upgradeGeneratorCostHalfRank: number;
+  /** Ranque da melhoria "dobrar pontos de melhoria por marco" (0 = sem; cada ranque ×2 nos ◆ ganhos). */
+  upgradeMilestoneDoublerRank: number;
   /** Pontos de prestígio acumulados (ganhos ao atingir 1 Dc de recurso base). */
   prestigePoints: Decimal;
   /** Quantos marcos de 1 Dc já foram contabilizados (para não dar pontos duplicados). */
-  prestigeThresholdsClaimed: number;
+  prestigeThresholdsClaimed: Decimal;
   generators: GeneratorState[];
   lastUpdateTimestamp: number;
   options: {
@@ -61,6 +67,8 @@ function initialGeneratorState(id: GeneratorId): GeneratorState {
     currentMilestoneTargetIndex: 1,
     upgradeCycleSpeedRank: 0,
     upgradeProductionRank: 0,
+    upgradeCritChanceRank: 0,
+    upgradeCritMultiplierRank: 0,
   };
 }
 
@@ -89,8 +97,9 @@ export function getInitialState(): GameState {
     ticketTradeMilestoneCount: 0,
     upgradeTicketMultiplierRank: 0,
     upgradeGeneratorCostHalfRank: 0,
+    upgradeMilestoneDoublerRank: 0,
     prestigePoints: ZERO,
-    prestigeThresholdsClaimed: 0,
+    prestigeThresholdsClaimed: ZERO,
     generators: GENERATOR_IDS.map((id) => initialGeneratorState(id)),
     lastUpdateTimestamp: Date.now(),
     options: { showFPS: false },

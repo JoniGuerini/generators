@@ -13,6 +13,13 @@ import {
   getUpgradeCostTicketRate,
   getUpgradeCostTicketMultiplier,
   getTicketTradeThreshold,
+  getUpgradeCostMilestoneDoubler,
+  getMilestoneRewardMultiplier,
+  getCritChance,
+  getCritMultiplier,
+  getUpgradeCostCritChance,
+  getUpgradeCostCritMultiplier,
+  MAX_CRIT_CHANCE_RANK,
 } from "@/engine/upgrades";
 import { formatNumber, formatTime } from "@/utils/format";
 import { useHoldToRepeat } from "@/hooks/useHoldToRepeat";
@@ -108,6 +115,7 @@ export function UpgradesPage() {
     upgradeTicketRateRank,
     upgradeTicketMultiplierRank,
     upgradeGeneratorCostHalfRank,
+    upgradeMilestoneDoublerRank,
     generatorsData,
   } = useGameSelector((state) => {
     const everOwnedIds = state.generators.filter(g => g.everOwned).map(g => g.id);
@@ -115,6 +123,8 @@ export function UpgradesPage() {
       id: g.id,
       upgradeCycleSpeedRank: g.upgradeCycleSpeedRank,
       upgradeProductionRank: g.upgradeProductionRank,
+      upgradeCritChanceRank: g.upgradeCritChanceRank,
+      upgradeCritMultiplierRank: g.upgradeCritMultiplierRank,
     }));
 
     return {
@@ -125,6 +135,7 @@ export function UpgradesPage() {
       upgradeTicketRateRank: state.upgradeTicketRateRank,
       upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank,
       upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
+      upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
       generatorsData,
     };
   }, (a, b) => 
@@ -134,11 +145,14 @@ export function UpgradesPage() {
     a.upgradeTicketRateRank === b.upgradeTicketRateRank &&
     a.upgradeTicketMultiplierRank === b.upgradeTicketMultiplierRank &&
     a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
+    a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
     a.generatorIdsForUpgrades.join() === b.generatorIdsForUpgrades.join() &&
     a.generatorsData.length === b.generatorsData.length &&
     a.generatorsData.every((g, i) => 
       g.upgradeCycleSpeedRank === b.generatorsData[i].upgradeCycleSpeedRank && 
-      g.upgradeProductionRank === b.generatorsData[i].upgradeProductionRank
+      g.upgradeProductionRank === b.generatorsData[i].upgradeProductionRank &&
+      g.upgradeCritChanceRank === b.generatorsData[i].upgradeCritChanceRank &&
+      g.upgradeCritMultiplierRank === b.generatorsData[i].upgradeCritMultiplierRank
     )
   );
 
@@ -271,7 +285,7 @@ export function UpgradesPage() {
             </div>
           </div>
         ) : (
-          <div className="mx-auto max-w-4xl space-y-5">
+          <div className="space-y-5">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-lg text-violet-400" aria-hidden>½</div>
               {(() => {
@@ -293,6 +307,39 @@ export function UpgradesPage() {
                       dispatch({ type: "BUY_GENERATOR_COST_HALF_UPGRADE" })
                     }
                     buttonLabel={`◆ ${formatNumber(costHalf)}`}
+                  />
+                );
+              })()}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-sm font-bold text-violet-400" aria-hidden>×2</div>
+              {(() => {
+                const rank = upgradeMilestoneDoublerRank;
+                const costDoubler = getUpgradeCostMilestoneDoubler(rank);
+                const canBuyDoubler = milestoneCurrency.gte(costDoubler);
+                const currentMult = getMilestoneRewardMultiplier(rank);
+                const nextMult = getMilestoneRewardMultiplier(rank + 1);
+                return (
+                  <UpgradeRow
+                    flexible
+                    label={
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Dobrar <span className="text-violet-400">◆</span> por marco</span>
+                        <div className="flex items-center gap-1.5 text-sm font-medium">
+                          <span className="text-zinc-400">×{currentMult}</span>
+                          <span className="text-violet-400/80">→</span>
+                          <span className="text-white">×{nextMult}</span>
+                        </div>
+                      </div>
+                    }
+                    sublabel={`ranque ${rank}`}
+                    cost={`◆ ${formatNumber(costDoubler)}`}
+                    canBuy={canBuyDoubler}
+                    onBuy={() =>
+                      dispatch({ type: "BUY_MILESTONE_DOUBLER_UPGRADE" })
+                    }
+                    buttonLabel={`◆ ${formatNumber(costDoubler)}`}
                   />
                 );
               })()}
@@ -416,6 +463,65 @@ export function UpgradesPage() {
                           }
                           buttonLabel={`◆ ${formatNumber(costProd)}`}
                         />
+                        {(() => {
+                          const critRank = gen.upgradeCritChanceRank;
+                          const critMultRank = gen.upgradeCritMultiplierRank;
+                          const costCrit = critRank < MAX_CRIT_CHANCE_RANK
+                            ? getUpgradeCostCritChance(generatorNumber, critRank)
+                            : null;
+                          const costCritMult = getUpgradeCostCritMultiplier(generatorNumber, critMultRank);
+                          const canBuyCrit = costCrit != null && milestoneCurrency.gte(costCrit);
+                          const canBuyCritMult = milestoneCurrency.gte(costCritMult);
+                          const currentChance = getCritChance(critRank);
+                          const nextChance = getCritChance(critRank + 1);
+                          const currentCritMult = getCritMultiplier(critMultRank);
+                          const nextCritMult = getCritMultiplier(critMultRank + 1);
+                          return (
+                            <>
+                              <UpgradeRow
+                                flexible
+                                label={
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Chance de crítico</span>
+                                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                                      <span className="text-zinc-400">{(currentChance * 100).toFixed(1)}%</span>
+                                      {critRank < MAX_CRIT_CHANCE_RANK && (
+                                        <>
+                                          <span className="text-violet-400/80">→</span>
+                                          <span className="text-white">{(nextChance * 100).toFixed(1)}%</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                }
+                                sublabel={`ranque ${critRank}${MAX_CRIT_CHANCE_RANK > 0 ? ` / ${MAX_CRIT_CHANCE_RANK}` : ""}`}
+                                cost={costCrit ? `◆ ${formatNumber(costCrit)}` : ""}
+                                canBuy={canBuyCrit ?? false}
+                                onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "critChance" })}
+                                buttonLabel={costCrit ? `◆ ${formatNumber(costCrit)}` : "—"}
+                                maxed={critRank >= MAX_CRIT_CHANCE_RANK}
+                              />
+                              <UpgradeRow
+                                flexible
+                                label={
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Eficiência do crítico</span>
+                                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                                      <span className="text-zinc-400">×{currentCritMult}</span>
+                                      <span className="text-violet-400/80">→</span>
+                                      <span className="text-white">×{nextCritMult}</span>
+                                    </div>
+                                  </div>
+                                }
+                                sublabel={`ranque ${critMultRank}`}
+                                cost={`◆ ${formatNumber(costCritMult)}`}
+                                canBuy={canBuyCritMult}
+                                onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "critMultiplier" })}
+                                buttonLabel={`◆ ${formatNumber(costCritMult)}`}
+                              />
+                            </>
+                          );
+                        })()}
                       </div>
                     </li>
                   );

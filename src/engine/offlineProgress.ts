@@ -7,6 +7,8 @@ import {
   getEffectiveCycleTimeSeconds,
   getEffectiveProductionPerCycle,
   getTicketsPerSecond,
+  getCritChance,
+  getCritMultiplier,
 } from "@/engine/upgrades";
 
 /** Mínimo de tempo ausente (em ms) para mostrar o card de boas-vindas (5 segundos). */
@@ -59,7 +61,10 @@ export function simulateOfflineProgress(
     const progressRemainder = progress - cyclesCompleted;
 
     if (cyclesCompleted >= 1) {
-      const produced = productionPerCycle.mul(gen.quantity).mul(cyclesCompleted);
+      const critChance = getCritChance(gen.upgradeCritChanceRank);
+      const critMult = getCritMultiplier(gen.upgradeCritMultiplierRank);
+      const avgMultiplier = 1 + critChance * (critMult - 1);
+      const produced = productionPerCycle.mul(gen.quantity).mul(cyclesCompleted).mul(avgMultiplier);
       if (def.produces === "base") {
         baseResource = baseResource.add(produced);
       } else {

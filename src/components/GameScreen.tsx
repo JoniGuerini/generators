@@ -16,6 +16,7 @@ import { UpgradesPage } from "./UpgradesPage";
 import { OfflineWelcomeCard } from "./OfflineWelcomeCard";
 
 import { DocumentationPage } from "./DocumentationPage";
+import { PrestigeBar } from "./PrestigeBar";
 
 export type MainView = "game" | "upgrades" | "docs";
 
@@ -79,14 +80,26 @@ export function GameScreen() {
       const s = stateRef.current;
       runOfflineCheck(s, now, dispatch, setOfflineGains, true);
     }
+    function onVisibilityChange() {
+      if (document.visibilityState !== "visible") return;
+      const s = stateRef.current;
+      if (!s) return;
+      const now = Date.now();
+      runOfflineCheck(s, now, dispatch, setOfflineGains, true);
+    }
     window.addEventListener("pageshow", onPageShow);
-    return () => window.removeEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [dispatch]);
 
   return (
     <BuyModeProvider>
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-zinc-800 text-zinc-100">
         <Header />
+        <PrestigeBar />
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-2 py-2">
           {view === "game" ? (
             <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">

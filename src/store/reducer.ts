@@ -26,12 +26,14 @@ export type GameAction =
   | { type: "TICK"; deltaTimeMs: number; currentTimestamp: number }
   | { type: "BUY_GENERATOR"; id: GeneratorId; amount: number }
   | { type: "CLAIM_MILESTONES"; id: GeneratorId }
+  | { type: "CLAIM_ALL_MILESTONES" }
   | { type: "BUY_UPGRADE"; id: GeneratorId; upgradeType: "cycleSpeed" | "production" }
   | { type: "BUY_TICKET_RATE_UPGRADE" }
   | { type: "BUY_TICKET_MULTIPLIER_UPGRADE" }
   | { type: "TRADE_BASE_FOR_TICKET_RATE" }
   | { type: "BUY_GENERATOR_COST_HALF_UPGRADE" }
   | { type: "TOGGLE_FPS" }
+  | { type: "RESET_OPTIONS" }
   | { type: "RESET_GAME" }
   | { type: "REPLACE_STATE"; state: GameState };
 
@@ -49,10 +51,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       let generatorsChanged = false;
       const updatedGenerators = state.generators.map((gen) => {
         if (Decimal.lte(gen.quantity, Decimal.dZero)) {
-          if (gen.cycleProgress !== 0) {
-            generatorsChanged = true;
-            return { ...gen, cycleProgress: 0, cycleStartTime: now };
-          }
           return gen;
         }
 
@@ -68,7 +66,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         
         let progress = gen.cycleProgress + deltaSec / cycleTimeSec;
         const cyclesCompleted = Math.floor(progress);
-        let cycleStartTime = gen.cycleStartTime;
 
         if (cyclesCompleted >= 1) {
           generatorsChanged = true;
@@ -81,14 +78,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             const currentDelta = deltasMap.get(def.produces) || Decimal.dZero;
             deltasMap.set(def.produces, currentDelta.add(produced));
           }
-
-          const cycleTimeMs = cycleTimeSec * 1000;
-          cycleStartTime = now - progress * cycleTimeMs;
         } else if (progress !== gen.cycleProgress) {
-          /* Acumula progresso entre ticks; sem isso o ciclo nunca completa (sempre resetava). */
           generatorsChanged = true;
         }
 
+        const cycleTimeMs = cycleTimeSec * 1000;
+        const cycleStartTime = now - progress * cycleTimeMs;
         return { ...gen, cycleProgress: progress, cycleStartTime };
       });
 
@@ -136,13 +131,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         // But we return updatedGenerators which has new cycleStartTimes
       }
 
+      const PRESTIGE_THRESHOLD = Decimal.pow(10, 33);
+      let prestigePoints = state.prestigePoints;
+      let prestigeThresholdsClaimed = state.prestigeThresholdsClaimed;
+      const currentDecillions = baseResource.div(PRESTIGE_THRESHOLD).floor();
+      const newCount = Math.min(currentDecillions.toNumber(), Number.MAX_SAFE_INTEGER);
+      if (Number.isFinite(newCount) && newCount > prestigeThresholdsClaimed) {
+        const earned = newCount - prestigeThresholdsClaimed;
+        prestigePoints = prestigePoints.add(Decimal.fromNumber(earned));
+        prestigeThresholdsClaimed = newCount;
+      }
+
       return {
         ...state,
         baseResource,
         ticketCurrency,
         ticketAccumulator,
+        prestigePoints,
+        prestigeThresholdsClaimed,
         generators: generatorsWithGains,
-        lastUpdateTimestamp: now, // Use actual current timestamp for better precision
+        lastUpdateTimestamp: now,
       };
     }
 
@@ -188,15 +196,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const nextGenerators = state.generators.map((g, i) => {
         if (i === genIndex) {
-          const wasUnowned = !g.everOwned || g.quantity.lte(Decimal.dZero);
+          const isFirstPurchase = !g.everOwned;
+          const wasEmpty = g.everOwned && g.quantity.lte(Decimal.dZero);
+          const cycleTimeSec = getEffectiveCycleTimeSeconds(def.cycleTimeSeconds, g.upgradeCycleSpeedRank);
           const next = {
             ...g,
             quantity: g.quantity.add(Decimal.fromNumber(amountNum)),
             everOwned: true,
-            // Se o gerador estava zerado/inativo, reinicia o ciclo do zero agora.
-            // Isso previne que a barra apareça já "carregada" quando comprado.
-            cycleProgress: wasUnowned ? 0 : g.cycleProgress,
-            cycleStartTime: wasUnowned ? Date.now() : g.cycleStartTime,
+            cycleProgress: isFirstPurchase ? 0 : g.cycleProgress,
+            cycleStartTime: isFirstPurchase
+              ? Date.now()
+              : wasEmpty
+                ? Date.now() - g.cycleProgress * cycleTimeSec * 1000
+                : g.cycleStartTime,
           };
           return {
             ...next,
@@ -309,14 +321,40 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case "CLAIM_ALL_MILESTONES": {
+      let totalCoins = Decimal.dZero;
+      const updatedGens = state.generators.map((gen) => {
+        const currentCount = getCurrentMilestoneCount(gen.quantity);
+        if (currentCount <= gen.claimedMilestoneIndex) return gen;
+        const generatorNumber = parseInt(gen.id.replace("generator", ""), 10);
+        totalCoins = totalCoins.add(
+          getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentCount)
+        );
+        return { ...gen, claimedMilestoneIndex: currentCount };
+      });
+      if (totalCoins.lte(Decimal.dZero)) return state;
+      return {
+        ...state,
+        milestoneCurrency: state.milestoneCurrency.add(totalCoins),
+        generators: updatedGens,
+      };
+    }
+
     case "TOGGLE_FPS": {
-      const currentShowFPS = state.options?.showFPS ?? true;
+      const currentShowFPS = state.options?.showFPS ?? false;
       return {
         ...state,
         options: {
           ...(state.options || {}),
           showFPS: !currentShowFPS,
         },
+      };
+    }
+
+    case "RESET_OPTIONS": {
+      return {
+        ...state,
+        options: { showFPS: false },
       };
     }
 

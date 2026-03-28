@@ -4,6 +4,7 @@ import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { GENERATOR_DEFS } from "@/engine/constants";
 import {
   getEffectiveCycleTimeSeconds,
+  getEffectiveProductionPerCycle,
   getMaxCycleSpeedRank,
   getUpgradeCostCycleSpeed,
   getUpgradeCostProduction,
@@ -13,61 +14,13 @@ import {
   getUpgradeCostTicketMultiplier,
   getTicketTradeThreshold,
 } from "@/engine/upgrades";
-import { formatNumber } from "@/utils/format";
+import { formatNumber, formatTime } from "@/utils/format";
+import { useHoldToRepeat } from "@/hooks/useHoldToRepeat";
 
 type UpgradesTab = "geradores" | "tickets";
 
 /** Largura mínima do botão para caber "◆ 100" e "+1 ▲/s" em uma linha */
 const UPGRADE_BUTTON_WIDTH = "10rem";
-/** Largura base de cada bloco de upgrade para os geradores (lado a lado) */
-const UPGRADE_ROW_WIDTH_GEN = "18.5rem";
-/** Largura estendida para melhorias globais/tickets (linha única) */
-const UPGRADE_ROW_WIDTH_WIDE = "26rem";
-
-/** Card horizontal: ícone + título/descrição à esquerda, ações à direita */
-function UpgradeCard({
-  title,
-  icon,
-  iconBg,
-  description,
-  widthMode = "wide",
-  children,
-}: {
-  title: string;
-  icon: string;
-  iconBg: string;
-  description?: string;
-  widthMode?: "wide" | "gen";
-  children: React.ReactNode;
-}) {
-  const containerMinWidth = widthMode === "wide" ? UPGRADE_ROW_WIDTH_WIDE : UPGRADE_ROW_WIDTH_GEN;
-  return (
-    <div className="rounded-xl border border-zinc-600/80 bg-zinc-800/60 shadow-lg overflow-hidden">
-      <div className="flex flex-nowrap items-center gap-4 p-4">
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg ${iconBg}`}
-          aria-hidden
-        >
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-white">{title}</h3>
-          {description && (
-            <p className="text-xs text-zinc-500" title={description}>
-              {description}
-            </p>
-          )}
-        </div>
-        <div
-          className="flex shrink-0 flex-nowrap items-center gap-3"
-          style={{ minWidth: containerMinWidth }}
-        >
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /** Uma linha de upgrade: área de info + botão do mesmo tamanho em todos os cards */
 function UpgradeRow({
@@ -80,6 +33,7 @@ function UpgradeRow({
   maxed,
   buttonVariant = "default",
   width,
+  flexible,
 }: {
   label: React.ReactNode;
   sublabel?: string;
@@ -91,21 +45,23 @@ function UpgradeRow({
   /** "base" = cor da moeda base (●); "default" = roxo */
   buttonVariant?: "default" | "base";
   width?: string;
+  flexible?: boolean;
 }) {
-  const rowWidth = width || UPGRADE_ROW_WIDTH_GEN;
+  const rowWidth = width || "18.5rem";
   const buttonActiveClass =
     buttonVariant === "base"
-      ? "bg-cyan-600 text-white hover:bg-cyan-500 active:scale-[0.98]"
-      : "bg-violet-600 text-white hover:bg-violet-500 active:scale-[0.98]";
+      ? "btn-3d btn-3d--cyan bg-cyan-600 text-white hover:bg-cyan-500"
+      : "btn-3d btn-3d--violet bg-violet-600 text-white hover:bg-violet-500";
+  const hold = useHoldToRepeat(onBuy);
   return (
     <div
-      className="flex flex-nowrap items-center justify-between gap-3 rounded-lg bg-zinc-900/70 px-3 py-2"
-      style={{ width: rowWidth, minWidth: rowWidth }}
+      className={`flex flex-nowrap items-center justify-between gap-3 rounded-lg bg-zinc-900/70 px-3 py-2 ${flexible ? "min-w-0 flex-1" : ""}`}
+      style={flexible ? undefined : { width: rowWidth, minWidth: rowWidth }}
     >
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
         <span className="text-sm text-zinc-300">{label}</span>
         {sublabel && (
-          <span className="text-xs text-zinc-500">({sublabel})</span>
+          <span className="text-xs text-zinc-500">{sublabel}</span>
         )}
       </div>
       {maxed ? (
@@ -118,12 +74,16 @@ function UpgradeRow({
       ) : (
         <button
           type="button"
-          onClick={onBuy}
+          onPointerDown={hold.onPointerDown}
+          onPointerUp={hold.onPointerUp}
+          onPointerCancel={hold.onPointerCancel}
+          onLostPointerCapture={hold.onLostPointerCapture}
+          onKeyDown={hold.onKeyDown}
           disabled={!canBuy}
-          title={cost ? `Custo: ${cost}` : undefined}
+          title={cost ? `Custo: ${cost} — segure para comprar em série` : undefined}
           style={{ minWidth: UPGRADE_BUTTON_WIDTH }}
-          className={`flex h-9 shrink-0 items-center justify-center rounded-lg px-3 text-sm font-medium transition whitespace-nowrap ${
-            canBuy ? buttonActiveClass : "cursor-not-allowed bg-zinc-700 text-zinc-500"
+          className={`flex h-9 shrink-0 items-center justify-center rounded-lg px-3 text-sm font-medium whitespace-nowrap touch-manipulation select-none ${
+            canBuy ? buttonActiveClass : "btn-3d btn-3d--zinc cursor-not-allowed bg-zinc-700 text-zinc-500"
           }`}
         >
           {buttonLabel}
@@ -241,17 +201,14 @@ export function UpgradesPage() {
       {/* Conteúdo */}
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {tab === "tickets" ? (
-          <div className="mx-auto max-w-4xl space-y-5">
-            <UpgradeCard
-              title="Tickets por segundo"
-              icon="▲"
-              iconBg="bg-amber-500/20 text-amber-400"
-              description="Aumenta a produção base de tickets por segundo."
-            >
+          <div className="mx-auto max-w-4xl space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-lg text-amber-400" aria-hidden>▲</div>
               <UpgradeRow
+                flexible
                 label={
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Produção de Tickets</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Tickets por segundo</span>
                     <div className="flex items-center gap-1.5 text-sm font-medium">
                       <span className="text-zinc-400">{formatNumber(Decimal.fromNumber(ticketsPerSec))}</span>
                       <span className="text-amber-400/80">→</span>
@@ -260,25 +217,20 @@ export function UpgradesPage() {
                     </div>
                   </div>
                 }
-                sublabel={`ranque ◆ ${upgradeTicketRateRank}`}
+                sublabel={`ranque ${upgradeTicketRateRank}`}
                 cost={`◆ ${formatNumber(costTicketRate)}`}
                 canBuy={canBuyTicketRate}
-                width={UPGRADE_ROW_WIDTH_WIDE}
                 onBuy={() => dispatch({ type: "BUY_TICKET_RATE_UPGRADE" })}
                 buttonLabel={`◆ ${formatNumber(costTicketRate)}`}
               />
-            </UpgradeCard>
-            <UpgradeCard
-              title="Dobrar produção de tickets"
-              icon="×2"
-              iconBg="bg-amber-500/20 text-amber-400"
-              description="Dobra a velocidade total de ganho de tickets."
-              widthMode="wide"
-            >
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-sm font-bold text-amber-400" aria-hidden>×2</div>
               <UpgradeRow
+                flexible
                 label={
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Produção de Tickets</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Dobrar produção</span>
                     <div className="flex items-center gap-1.5 text-sm font-medium">
                       <span className="text-zinc-400">{formatNumber(Decimal.fromNumber(ticketsPerSec))}</span>
                       <span className="text-amber-400/80">→</span>
@@ -290,22 +242,17 @@ export function UpgradesPage() {
                 sublabel={`ranque ×2: ${upgradeTicketMultiplierRank}`}
                 cost={`◆ ${formatNumber(costTicketMultiplier)}`}
                 canBuy={canBuyTicketMultiplier}
-                width={UPGRADE_ROW_WIDTH_WIDE}
                 onBuy={() => dispatch({ type: "BUY_TICKET_MULTIPLIER_UPGRADE" })}
                 buttonLabel={`◆ ${formatNumber(costTicketMultiplier)}`}
               />
-            </UpgradeCard>
-            <UpgradeCard
-              title="Trocar recurso base por +1 ▲/s"
-              icon="●"
-              iconBg="bg-cyan-500/20 text-cyan-400"
-              description="Gasta recurso principal para aumentar a base de tickets permanentemente."
-              widthMode="wide"
-            >
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/20 text-lg text-cyan-400" aria-hidden>●</div>
               <UpgradeRow
+                flexible
                 label={
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Produção de Tickets</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Trocar recurso por +1 ▲/s</span>
                     <div className="flex items-center gap-1.5 text-sm font-medium">
                       <span className="text-zinc-400">{formatNumber(Decimal.fromNumber(ticketsPerSec))}</span>
                       <span className="text-amber-400/80">→</span>
@@ -317,46 +264,45 @@ export function UpgradesPage() {
                 sublabel={`trocas feitas: ${ticketTradeMilestoneCount}`}
                 cost={`● ${formatNumber(tradeCost)}`}
                 canBuy={canTrade}
-                width={UPGRADE_ROW_WIDTH_WIDE}
                 onBuy={() => dispatch({ type: "TRADE_BASE_FOR_TICKET_RATE" })}
                 buttonLabel="+1 ▲/s"
                 buttonVariant="base"
               />
-            </UpgradeCard>
+            </div>
           </div>
         ) : (
           <div className="mx-auto max-w-4xl space-y-5">
-            <UpgradeCard
-              title="Custo de compra ÷2 (todos os geradores)"
-              icon="½"
-              iconBg="bg-violet-500/20 text-violet-400"
-              description="Reduz o custo de todos os geradores pela metade. Cada ranque aplica ÷2 de novo."
-              widthMode="wide"
-            >
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-lg text-violet-400" aria-hidden>½</div>
               {(() => {
                 const rank = upgradeGeneratorCostHalfRank;
                 const costHalf = getUpgradeCostGeneratorCostHalf(rank);
                 const canBuyHalf = milestoneCurrency.gte(costHalf);
                 return (
                   <UpgradeRow
-                    label={`Ranque atual: ${rank}`}
+                    flexible
+                    label={
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Custo ÷2 (todos os geradores)</span>
+                        <span className="text-sm font-medium text-zinc-400">ranque {rank}</span>
+                      </div>
+                    }
                     cost={`◆ ${formatNumber(costHalf)}`}
                     canBuy={canBuyHalf}
                     onBuy={() =>
                       dispatch({ type: "BUY_GENERATOR_COST_HALF_UPGRADE" })
                     }
                     buttonLabel={`◆ ${formatNumber(costHalf)}`}
-                    width={UPGRADE_ROW_WIDTH_WIDE}
                   />
                 );
               })()}
-            </UpgradeCard>
+            </div>
 
             <div>
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                 Por gerador
               </h3>
-              <ul className="space-y-4">
+              <ul className="space-y-2">
                 {generatorIdsForUpgrades.map((id) => {
                   const def = GENERATOR_DEFS[id];
                   const gen = generatorsData.find((g) => g.id === id);
@@ -386,60 +332,90 @@ export function UpgradesPage() {
                     milestoneCurrency.gte(costCycle);
                   const canBuyProd =
                     milestoneCurrency.gte(costProd);
-                  const effectiveCycle = getEffectiveCycleTimeSeconds(
+                  const currentCycle = getEffectiveCycleTimeSeconds(
                     def.cycleTimeSeconds,
                     cycleRank
+                  );
+                  const nextCycle = cycleRank < maxCycleRank
+                    ? getEffectiveCycleTimeSeconds(def.cycleTimeSeconds, cycleRank + 1)
+                    : currentCycle;
+                  const currentProd = getEffectiveProductionPerCycle(
+                    def.productionPerCycle,
+                    prodRank
+                  );
+                  const nextProd = getEffectiveProductionPerCycle(
+                    def.productionPerCycle,
+                    prodRank + 1
                   );
 
                   return (
                     <li
                       key={id}
-                      className="rounded-xl border border-zinc-600/80 bg-zinc-800/60 overflow-hidden"
+                      className="flex items-center gap-2"
                     >
-                      <div className="flex flex-nowrap items-center gap-4 p-4">
-                        <div className="flex shrink-0 items-center justify-center" title={def.name}>
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600/90 text-sm font-bold text-white">
-                            {generatorNumber}
-                          </div>
-                        </div>
-                        <div className="min-w-0 flex-1" />
-                        <div className="flex shrink-0 flex-nowrap items-center gap-3">
-                          <UpgradeRow
-                            label={`Tempo de ciclo: ${effectiveCycle.toFixed(2)}s`}
-                            sublabel={`ranque ${cycleRank}${
-                              maxCycleRank > 0 ? ` / ${maxCycleRank}` : ""
-                            }`}
-                            cost={
-                              costCycle
-                                ? `◆ ${formatNumber(costCycle)}`
-                                : ""
-                            }
-                            canBuy={canBuyCycle ?? false}
-                            onBuy={() =>
-                              dispatch({
-                                type: "BUY_UPGRADE",
-                                id,
-                                upgradeType: "cycleSpeed",
-                              })
-                            }
-                            buttonLabel={costCycle ? `◆ ${formatNumber(costCycle)}` : "—"}
-                            maxed={cycleRank >= maxCycleRank}
-                          />
-                          <UpgradeRow
-                            label="Produção por ciclo ×2"
-                            sublabel={`ranque ${prodRank}`}
-                            cost={`◆ ${formatNumber(costProd)}`}
-                            canBuy={canBuyProd}
-                            onBuy={() =>
-                              dispatch({
-                                type: "BUY_UPGRADE",
-                                id,
-                                upgradeType: "production",
-                              })
-                            }
-                            buttonLabel={`◆ ${formatNumber(costProd)}`}
-                          />
-                        </div>
+                      <div className="btn-3d--red flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-600/90 text-sm font-bold text-white" title={def.name}>
+                        {generatorNumber}
+                      </div>
+                      <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+                        <UpgradeRow
+                          flexible
+                          label={
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Tempo de ciclo</span>
+                              <div className="flex items-center gap-1.5 text-sm font-medium">
+                                <span className="text-zinc-400">{formatTime(currentCycle)}</span>
+                                {cycleRank < maxCycleRank && (
+                                  <>
+                                    <span className="text-violet-400/80">→</span>
+                                    <span className="text-white">{formatTime(nextCycle)}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          }
+                          sublabel={`ranque ${cycleRank}${
+                            maxCycleRank > 0 ? ` / ${maxCycleRank}` : ""
+                          }`}
+                          cost={
+                            costCycle
+                              ? `◆ ${formatNumber(costCycle)}`
+                              : ""
+                          }
+                          canBuy={canBuyCycle ?? false}
+                          onBuy={() =>
+                            dispatch({
+                              type: "BUY_UPGRADE",
+                              id,
+                              upgradeType: "cycleSpeed",
+                            })
+                          }
+                          buttonLabel={costCycle ? `◆ ${formatNumber(costCycle)}` : "—"}
+                          maxed={cycleRank >= maxCycleRank}
+                        />
+                        <UpgradeRow
+                          flexible
+                          label={
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Produção por ciclo</span>
+                              <div className="flex items-center gap-1.5 text-sm font-medium">
+                                <span className="text-zinc-400">{formatNumber(currentProd)}</span>
+                                <span className="text-violet-400/80">→</span>
+                                <span className="text-white">{formatNumber(nextProd)}</span>
+                              </div>
+                            </div>
+                          }
+                          sublabel={`ranque ${prodRank}`}
+                          cost={`◆ ${formatNumber(costProd)}`}
+                          canBuy={canBuyProd}
+                          onBuy={() =>
+                            dispatch({
+                              type: "BUY_UPGRADE",
+                              id,
+                              upgradeType: "production",
+                            })
+                          }
+                          buttonLabel={`◆ ${formatNumber(costProd)}`}
+                        />
                       </div>
                     </li>
                   );

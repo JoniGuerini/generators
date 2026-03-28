@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useCallback } from "react";
 import { useBuyMode } from "@/contexts/BuyModeContext";
 import type { BuyMode } from "@/contexts/BuyModeContext";
 
@@ -9,66 +9,62 @@ const OPTIONS: { value: BuyMode; label: string }[] = [
   { value: "50%", label: "50%" },
   { value: "100%", label: "100%" },
   { value: "marco", label: "Marco" },
+  { value: "proximo", label: "Próximo" },
 ];
 
 export function BuyModeSelect() {
   const { buyMode, setBuyMode } = useBuyMode();
-  const [open, setOpen] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
+  }, []);
 
   const currentLabel = OPTIONS.find((o) => o.value === buyMode)?.label ?? buyMode;
 
   return (
-    <div className="relative inline-block min-w-[6rem]" ref={containerRef}>
+    <div
+      className="group/select relative inline-block w-[160px]"
+      ref={containerRef}
+      onMouseEnter={cancelClose}
+      onMouseLeave={() => {
+        closeTimerRef.current = setTimeout(() => {}, 150);
+      }}
+    >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="header-buy-select flex h-[40px] w-full min-w-0 items-center justify-between gap-2 rounded-md border border-zinc-600 bg-zinc-700 px-3 text-left text-sm text-zinc-200 transition hover:bg-zinc-600 focus:outline-none focus:ring-0"
+        className="btn-3d btn-3d--zinc flex h-[40px] w-full min-w-0 items-center justify-center gap-2 rounded-md border border-zinc-600 bg-zinc-700 px-3 text-sm text-zinc-200 hover:bg-zinc-600 focus:outline-none focus:ring-0"
         aria-label="Quantidade a comprar por clique"
-        aria-expanded={open}
         aria-haspopup="listbox"
       >
         {currentLabel}
       </button>
-      {open && (
+      <div className="pointer-events-none absolute bottom-full left-0 right-0 z-50 pb-2 opacity-0 transition-opacity duration-100 group-hover/select:pointer-events-auto group-hover/select:opacity-100">
         <ul
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border border-zinc-600 bg-zinc-800 py-1 shadow-lg"
+          className="flex flex-col-reverse gap-2"
         >
           {OPTIONS.map(({ value, label }) => (
-            <li
-              key={value}
-              role="option"
-              aria-selected={buyMode === value}
-              onClick={() => {
-                setBuyMode(value);
-                setOpen(false);
-              }}
-              className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-600 ${buyMode === value ? "bg-zinc-700/80" : ""}`}
-            >
-              {buyMode === value ? (
-                <span className="text-lime-400" aria-hidden>
-                  ✓
-                </span>
-              ) : (
-                <span className="w-[1ch]" aria-hidden />
-              )}
-              {label}
+            <li key={value} role="option" aria-selected={buyMode === value}>
+              <button
+                type="button"
+                onClick={() => setBuyMode(value)}
+                className={`btn-3d flex h-[40px] w-full items-center justify-center rounded-md px-3 text-sm font-medium transition ${
+                  buyMode === value
+                    ? "btn-3d--purple bg-purple-600 text-white"
+                    : "btn-3d--zinc bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
+                }`}
+              >
+                {label}
+              </button>
             </li>
           ))}
         </ul>
-      )}
+      </div>
     </div>
   );
 }

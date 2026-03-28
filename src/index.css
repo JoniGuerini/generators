@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Geist", "Geist fallback";
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -79,9 +79,6 @@ h1 {
 button {
   border-radius: 8px;
   border: none;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
 }
@@ -101,20 +98,109 @@ button:focus-visible {
   padding-right: 32px;
 }
 
-/* Botão Comprar: verde quando pode comprar, cinza quando não (evita conflito com Tailwind condicional) */
+/* Efeito 3D genérico: alto relevo → baixo relevo ao clicar */
+.btn-3d {
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+}
+.btn-3d:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.4) !important;
+}
+
+/* Variantes de cor */
+.btn-3d--zinc {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.08),
+    0 3px 0 0 #333,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--green {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.2),
+    0 3px 0 0 #15803d,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--green:hover {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.25),
+    0 3px 0 0 #16a34a,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--violet {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #5b21b6,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--cyan {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #155e75,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--purple {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #6b21a8,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+
+.btn-3d--red {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #991b1b,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--purple-dark {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.1),
+    0 3px 0 0 #581c87,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--dark {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.05),
+    0 3px 0 0 #000,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+
+/* Card de marcos: efeito de pressão na barra interna sem mover o tooltip */
+.milestone-bar {
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+}
+.milestone-bar:has(button:active:enabled) {
+  transform: translateY(3px);
+  box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.4) !important;
+}
+
+/* Botão Comprar dos geradores (usa :has porque o <button> é overlay) */
+.buy-card-clickable {
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out;
+}
 .buy-card--affordable {
   background-color: rgb(22 163 74);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.2),
+    0 3px 0 0 #15803d,
+    0 4px 6px 0 rgba(0,0,0,0.3);
 }
 .buy-card--affordable:hover {
   background-color: rgb(34 197 94);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.25),
+    0 3px 0 0 #16a34a,
+    0 4px 6px 0 rgba(0,0,0,0.3);
 }
 .buy-card--unaffordable {
   background-color: rgb(82 82 82);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.08),
+    0 3px 0 0 #333,
+    0 4px 6px 0 rgba(0,0,0,0.3);
 }
-
-/* Animação de clique: o card encolhe quando o botão interno está :active */
 .buy-card-clickable:has(button:active) {
-  transform: scale(0.97);
+  transform: translateY(3px);
+  box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.4);
 }
 
 @media (prefers-color-scheme: light) {

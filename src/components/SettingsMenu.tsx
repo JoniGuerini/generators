@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import type { MainView } from "./GameScreen";
 
@@ -7,72 +7,169 @@ interface SettingsMenuProps {
   onNavigate: (view: MainView) => void;
 }
 
+type MenuTab = "geral" | "jogo";
+
 export function SettingsMenu({ currentView, onNavigate }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const showFPS = useGameSelector((state) => state.options?.showFPS ?? true);
+  const [tab, setTab] = useState<MenuTab>("geral");
+  const showFPS = useGameSelector((state) => state.options?.showFPS ?? false);
   const dispatch = useGameDispatch();
-  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Fecha o menu ao clicar fora dele
+  const close = useCallback(() => setIsOpen(false), []);
+
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    if (!isOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") close();
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen, close]);
 
   return (
-    <div className="relative" ref={menuRef}>
+    <>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex h-[40px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 transition hover:bg-zinc-600"
+        onClick={() => { setIsOpen(true); setTab("geral"); }}
+        className="btn-3d btn-3d--zinc flex h-[40px] w-[120px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
       >
         Menu
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-[calc(100%+8px)] right-0 flex w-48 flex-col gap-2 rounded-lg border border-zinc-700/80 bg-zinc-800 p-2 shadow-lg">
-          <label className="flex cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm text-zinc-200 transition hover:bg-zinc-700/50">
-            <span>Exibir FPS</span>
-            <input
-              type="checkbox"
-              checked={showFPS} // Fallback caso tenha state antigo sem options
-              onChange={() => dispatch({ type: "TOGGLE_FPS" })}
-              className="h-4 w-4 cursor-pointer rounded border-zinc-500 bg-zinc-700 text-indigo-500 focus:ring-1 focus:ring-indigo-500"
-            />
-          </label>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={close} />
 
-          <div className="my-1 h-[1px] w-full bg-zinc-700/50" />
+          <div className="relative z-10 flex h-[420px] w-[90vw] max-w-[480px] flex-col overflow-hidden rounded-xl border border-zinc-600/80 bg-zinc-800 shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-zinc-700/80 px-5 py-4">
+              <h2 className="text-lg font-semibold text-white">Menu</h2>
+              <button
+                type="button"
+                onClick={close}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-700 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
 
-          {currentView !== "docs" && (
-            <button
-              type="button"
-              onClick={() => {
-                onNavigate("docs");
-                setIsOpen(false);
-              }}
-              className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-medium text-zinc-200 transition hover:bg-zinc-700/50"
-            >
-              Documentação
-            </button>
-          )}
+            {/* Tabs */}
+            <div className="flex border-b border-zinc-700/80 bg-zinc-900/40">
+              <TabButton active={tab === "geral"} onClick={() => setTab("geral")}>
+                Geral
+              </TabButton>
+              <TabButton active={tab === "jogo"} onClick={() => setTab("jogo")}>
+                Jogo
+              </TabButton>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              dispatch({ type: "RESET_GAME" });
-              setIsOpen(false);
-            }}
-            className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-medium text-red-400 transition hover:bg-red-900/20"
-          >
-            Resetar Jogo
-          </button>
+            {/* Conteúdo */}
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+              {tab === "geral" && (
+                <>
+                  <ToggleOption
+                    label="Exibir FPS"
+                    description="Mostra o contador de frames por segundo"
+                    checked={showFPS}
+                    onChange={() => dispatch({ type: "TOGGLE_FPS" })}
+                  />
+                  {currentView !== "docs" && (
+                    <MenuButton
+                      label="Documentação"
+                      description="Regras e mecânicas do jogo"
+                      onClick={() => { onNavigate("docs"); close(); }}
+                    />
+                  )}
+                  <div className="my-1 h-[1px] w-full bg-zinc-700/50" />
+                  <MenuButton
+                    label="Resetar Configurações"
+                    description="Restaura todas as opções para o padrão"
+                    onClick={() => dispatch({ type: "RESET_OPTIONS" })}
+                  />
+                </>
+              )}
+
+              {tab === "jogo" && (
+                <>
+                  <MenuButton
+                    label="Resetar Jogo"
+                    description="Apaga todo o progresso e recomeça do zero"
+                    variant="danger"
+                    onClick={() => { dispatch({ type: "RESET_GAME" }); close(); }}
+                  />
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
+  );
+}
+
+function TabButton({ active, onClick, children }: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex-1 px-4 py-3 text-sm font-medium transition ${
+        active
+          ? "border-b-2 border-amber-400 bg-zinc-800/50 text-amber-400"
+          : "text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ToggleOption({ label, description, checked, onChange }: {
+  label: string;
+  description?: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label className="btn-3d btn-3d--zinc flex cursor-pointer items-center justify-between rounded-lg border border-zinc-600 bg-zinc-700 px-4 py-3 hover:bg-zinc-600">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium text-zinc-200">{label}</span>
+        {description && (
+          <span className="text-xs text-zinc-500">{description}</span>
+        )}
+      </div>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        className="h-4 w-4 cursor-pointer rounded border-zinc-500 bg-zinc-700 text-indigo-500 focus:ring-1 focus:ring-indigo-500"
+      />
+    </label>
+  );
+}
+
+function MenuButton({ label, description, variant = "default", onClick }: {
+  label: string;
+  description?: string;
+  variant?: "default" | "danger";
+  onClick: () => void;
+}) {
+  const classes = variant === "danger"
+    ? "btn-3d btn-3d--zinc bg-zinc-700 text-red-400 hover:bg-zinc-600"
+    : "btn-3d btn-3d--zinc bg-zinc-700 text-zinc-200 hover:bg-zinc-600";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full flex-col gap-0.5 rounded-lg border border-zinc-600 px-4 py-3 text-left ${classes}`}
+    >
+      <span className="text-sm font-medium">{label}</span>
+      {description && (
+        <span className="text-xs text-zinc-500">{description}</span>
+      )}
+    </button>
   );
 }

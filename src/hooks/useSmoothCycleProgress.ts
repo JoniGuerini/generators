@@ -7,7 +7,8 @@ import { registerCycleBarUpdate } from "@/hooks/cycleBarRegistry";
 export function useSmoothCycleProgress(
   cycleStartTime: number,
   cycleTimeSeconds: number,
-  active: boolean
+  active: boolean,
+  pausedProgress: number = 0
 ): React.RefObject<HTMLDivElement | null> {
   const barRef = useRef<HTMLDivElement | null>(null);
   const cycleStartRef = useRef(cycleStartTime);
@@ -23,7 +24,7 @@ export function useSmoothCycleProgress(
   useLayoutEffect(() => {
     if (!active) {
       const b = barRef.current;
-      if (b) b.style.transform = "scaleX(0)";
+      if (b) b.style.transform = `scaleX(${Math.min(1, Math.max(0, pausedProgress))})`;
       return undefined;
     }
 

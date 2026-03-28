@@ -89,9 +89,7 @@ export function getEffectiveGeneratorCost(
   return baseCost.div(Decimal.pow(Decimal.fromNumber(2), upgradeGeneratorCostHalfRank));
 }
 
-/** Custo em ◆ para o próximo ranque da melhoria global "custo de compra ÷2" (ranques infinitos). */
+/** Custo em ◆ para o próximo ranque da melhoria global "custo de compra ÷2": 1, 2, 4, 8… (dobra por ranque). */
 export function getUpgradeCostGeneratorCostHalf(currentRank: number): Decimal {
-  return Decimal.fromNumber(50).mul(
-    Decimal.pow(Decimal.fromNumber(2), currentRank)
-  );
+  return Decimal.pow(Decimal.fromNumber(2), Math.max(0, currentRank));
 }

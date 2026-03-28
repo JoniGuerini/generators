@@ -36,6 +36,10 @@ export interface GameState {
   upgradeTicketMultiplierRank: number;
   /** Ranque da melhoria global "reduzir custo de compra pela metade" (0 = sem; cada ranque ÷2 no custo). */
   upgradeGeneratorCostHalfRank: number;
+  /** Pontos de prestígio acumulados (ganhos ao atingir 1 Dc de recurso base). */
+  prestigePoints: Decimal;
+  /** Quantos marcos de 1 Dc já foram contabilizados (para não dar pontos duplicados). */
+  prestigeThresholdsClaimed: number;
   generators: GeneratorState[];
   lastUpdateTimestamp: number;
   options: {
@@ -85,8 +89,10 @@ export function getInitialState(): GameState {
     ticketTradeMilestoneCount: 0,
     upgradeTicketMultiplierRank: 0,
     upgradeGeneratorCostHalfRank: 0,
+    prestigePoints: ZERO,
+    prestigeThresholdsClaimed: 0,
     generators: GENERATOR_IDS.map((id) => initialGeneratorState(id)),
     lastUpdateTimestamp: Date.now(),
-    options: { showFPS: true },
+    options: { showFPS: false },
   };
 }

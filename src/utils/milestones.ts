@@ -42,7 +42,7 @@ export function getProgressTowardNextUnreachedMilestone(quantity: Decimal): numb
   return Math.max(0, Math.min(1, p));
 }
 
-/** Moedas ao resgatar: do marco (claimed+1) até current. Gerador N: marco 1 → N pts, marco 2 → N+1, marco 3 → N+2, ... */
+/** Moedas ao resgatar: do marco (claimed+1) até current. Gerador N: marco j → N×j pts. */
 export function getCoinsFromClaiming(
   generatorNumber: number,
   claimedMilestoneIndex: number,
@@ -51,7 +51,7 @@ export function getCoinsFromClaiming(
   if (currentMilestoneCount <= claimedMilestoneIndex) return Decimal.dZero;
   let sum = 0;
   for (let j = claimedMilestoneIndex + 1; j <= currentMilestoneCount; j++) {
-    sum += generatorNumber + j - 1;
+    sum += generatorNumber * j;
   }
   return Decimal.fromNumber(sum);
 }

@@ -43,7 +43,7 @@ export function simulateOfflineProgress(
   const updatedGenerators = state.generators.map((gen) => {
     const def = GENERATOR_DEFS[gen.id];
     if (Decimal.lte(gen.quantity, Decimal.dZero))
-      return { ...gen, cycleProgress: 0, cycleStartTime: now };
+      return gen;
 
     const cycleTimeSec = getEffectiveCycleTimeSeconds(
       def.cycleTimeSeconds,

@@ -16,33 +16,41 @@ const SUFFIXES_UP_TO_DC = [
   "Dc",
 ];
 
-/** Índice a partir do qual usamos representação por letras (AAAAA, AAAAB, …). */
+/** Índice a partir do qual usamos representação por letras. */
 const LETTER_TIER_START = 12;
 
-/** Quantidade de sufixos por letras: 26^5 = AAAAA até ZZZZZ. */
-const LETTER_TIER_COUNT = 26 ** 5;
+/**
+ * Faixas de letras progressivas: AA→ZZ (26²), AAA→ZZZ (26³), AAAA→ZZZZ (26⁴), AAAAA→ZZZZZ (26⁵).
+ * Cada faixa tem count sufixos; offset acumula o total das faixas anteriores.
+ */
+const LETTER_BANDS = [
+  { len: 2, count: 26 ** 2, offset: 0 },
+  { len: 3, count: 26 ** 3, offset: 26 ** 2 },
+  { len: 4, count: 26 ** 4, offset: 26 ** 2 + 26 ** 3 },
+  { len: 5, count: 26 ** 5, offset: 26 ** 2 + 26 ** 3 + 26 ** 4 },
+];
 
-/** Expoente (log10) máximo para 999 ZZZZZ; acima disso usamos formatação da break_eternity. */
+const LETTER_TIER_COUNT = LETTER_BANDS.reduce((s, b) => s + b.count, 0);
 const MAX_LETTER_EXP = 33 + 3 * (LETTER_TIER_START + LETTER_TIER_COUNT);
 
 /**
- * Converte índice da faixa (0 = AAAAA, 1 = AAAAB, …, 26^5-1 = ZZZZZ) em string de 5 letras.
- * Ordem: unidade (d0) à direita, varia primeiro; então d1, d2, d3, d4 da esquerda para direita.
+ * Converte índice global em sufixo de letras progressivo:
+ * 0→AA, 675→ZZ, 676→AAA, …, até ZZZZZ.
  */
 function letterCodeFromIndex(index: number): string {
   const i = Math.max(0, Math.min(index, LETTER_TIER_COUNT - 1));
-  const d0 = i % 26;
-  const d1 = Math.floor(i / 26) % 26;
-  const d2 = Math.floor(i / 26 ** 2) % 26;
-  const d3 = Math.floor(i / 26 ** 3) % 26;
-  const d4 = Math.floor(i / 26 ** 4) % 26;
-  return (
-    String.fromCharCode(65 + d4) +
-    String.fromCharCode(65 + d3) +
-    String.fromCharCode(65 + d2) +
-    String.fromCharCode(65 + d1) +
-    String.fromCharCode(65 + d0)
-  );
+  let band = LETTER_BANDS[0];
+  for (const b of LETTER_BANDS) {
+    if (i < b.offset + b.count) { band = b; break; }
+  }
+  const localIndex = i - band.offset;
+  let code = "";
+  let remainder = localIndex;
+  for (let d = 0; d < band.len; d++) {
+    code = String.fromCharCode(65 + (remainder % 26)) + code;
+    remainder = Math.floor(remainder / 26);
+  }
+  return code;
 }
 
 /**
@@ -91,10 +99,15 @@ export function formatNumber(value: Decimal): string {
 
 /**
  * Formata duração em segundos usando no máximo 2 unidades (as duas maiores).
- * Ex.: 45s → "45s", 64s → "1m 4s", 125s → "2m 5s", 3661s → "1h 1m", 12d+ → "12 days 3h"
+ * Ex.: 45s → "45s", 64s → "1m 4s", 3661s → "1h 1m", 400d → "1.1 anos"
+ * Para valores enormes (trilhões de anos+), usa formatNumber.
  */
 export function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0s";
+  if (seconds < 1) {
+    const rounded = parseFloat(seconds.toPrecision(2));
+    return `${rounded}s`;
+  }
   const s = Math.floor(seconds);
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
@@ -107,6 +120,17 @@ export function formatTime(seconds: number): string {
   }
   const d = Math.floor(h / 24);
   const hRem = h % 24;
-  const daysStr = d === 1 ? "1 day" : `${d} days`;
-  return hRem > 0 ? `${daysStr} ${hRem}h` : daysStr;
+  const SECONDS_PER_YEAR = 365.25 * 24 * 3600;
+  if (d < 365) {
+    const daysStr = d === 1 ? "1 dia" : `${d} dias`;
+    return hRem > 0 ? `${daysStr} ${hRem}h` : daysStr;
+  }
+  const years = seconds / SECONDS_PER_YEAR;
+  if (years < 1000) {
+    return years < 10
+      ? `${years.toFixed(1)} anos`
+      : `${Math.floor(years)} anos`;
+  }
+  const decYears = Decimal.fromNumber(years);
+  return `${formatNumber(decYears)} anos`;
 }

@@ -18,6 +18,8 @@ interface SavedState {
   ticketTradeMilestoneCount?: number;
   upgradeTicketMultiplierRank?: number;
   upgradeGeneratorCostHalfRank?: number;
+  prestigePoints?: string;
+  prestigeThresholdsClaimed?: number;
   generators: {
     id: string;
     quantity: string;
@@ -44,6 +46,8 @@ function serialize(state: GameState): string {
     ticketTradeMilestoneCount: state.ticketTradeMilestoneCount,
     upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank,
     upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
+    prestigePoints: state.prestigePoints.toString(),
+    prestigeThresholdsClaimed: state.prestigeThresholdsClaimed,
     generators: state.generators.map((g) => ({
       id: g.id,
       quantity: g.quantity.toString(),
@@ -108,8 +112,10 @@ function deserialize(raw: string): GameState | null {
       ticketTradeMilestoneCount: Number(saved.ticketTradeMilestoneCount) || 0,
       upgradeTicketMultiplierRank: Number(saved.upgradeTicketMultiplierRank) || 0,
       upgradeGeneratorCostHalfRank: Number(saved.upgradeGeneratorCostHalfRank) || 0,
+      prestigePoints: Decimal.fromString(saved.prestigePoints ?? "0"),
+      prestigeThresholdsClaimed: Number(saved.prestigeThresholdsClaimed) || 0,
       generators,
-      options: { showFPS: Boolean(saved.options?.showFPS ?? true) },
+      options: { showFPS: Boolean(saved.options?.showFPS ?? false) },
       lastUpdateTimestamp: saved.lastUpdateTimestamp ?? Date.now(),
     };
   } catch {

@@ -1,14 +1,32 @@
 import Decimal from "break_eternity.js";
 import type { GameState } from "@/store/gameState";
-import { GENERATOR_DEFS, type GeneratorId } from "@/engine/constants";
+import { GENERATOR_DEFS, GENERATOR_IDS, type GeneratorId } from "@/engine/constants";
 import { getEffectiveGeneratorCost } from "@/engine/upgrades";
 import { getNextMilestoneFromQuantity } from "@/utils/milestones";
 import type { BuyMode } from "@/contexts/BuyModeContext";
 
+/**
+ * Para o modo "proximo": quantas unidades do gerador atual são necessárias
+ * para comprar 1 do próximo gerador (considerando upgrade de custo).
+ * Retorna null se não houver próximo gerador.
+ */
+export function getNextGeneratorCostInCurrent(
+  id: GeneratorId,
+  upgradeGeneratorCostHalfRank: number
+): Decimal | null {
+  const idx = GENERATOR_IDS.indexOf(id);
+  if (idx < 0 || idx >= GENERATOR_IDS.length - 1) return null;
+  const nextId = GENERATOR_IDS[idx + 1];
+  const nextDef = GENERATOR_DEFS[nextId];
+  if (nextDef.costPreviousGenerator.lte(Decimal.dZero)) return null;
+  return getEffectiveGeneratorCost(nextDef.costPreviousGenerator, upgradeGeneratorCostHalfRank);
+}
+
 export function getBuyAmount(
   mode: BuyMode,
   maxAffordable: Decimal,
-  quantity?: Decimal
+  quantity?: Decimal,
+  nextGenCost?: Decimal | null,
 ): number {
   if (mode === "1x") return 1;
   if (mode === "marco") {
@@ -22,6 +40,15 @@ export function getBuyAmount(
     const amount = Math.min(n, Number.MAX_SAFE_INTEGER);
     if (amount === 0 && Decimal.gte(maxAffordable, Decimal.dOne)) return 1;
     return amount;
+  }
+  if (mode === "proximo") {
+    if (quantity == null || nextGenCost == null) return maxAffordable.gte(Decimal.dOne) ? 1 : 0;
+    const needed = nextGenCost.sub(quantity).ceil();
+    if (needed.lte(Decimal.dZero)) return 0;
+    const toBuy = Decimal.min(needed, maxAffordable);
+    const n = toBuy.toNumber();
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.min(n, Number.MAX_SAFE_INTEGER);
   }
   const pct =
     mode === "1%" ? 0.01 : mode === "10%" ? 0.1 : mode === "50%" ? 0.5 : 1;
@@ -82,17 +109,27 @@ export function computeGeneratorPurchase(
     hasEnoughPrev;
 
   const quantity = gen.quantity;
-  const buyAmount = getBuyAmount(buyMode, maxAffordable, quantity);
+  const nextGenCost = buyMode === "proximo"
+    ? getNextGeneratorCostInCurrent(id, half)
+    : null;
+  const buyAmount = getBuyAmount(buyMode, maxAffordable, quantity, nextGenCost);
   const amountNeededForMarco =
     buyMode === "marco"
       ? getNextMilestoneFromQuantity(quantity).sub(quantity).floor()
       : null;
   const canReachMarco =
     amountNeededForMarco == null || maxAffordable.gte(amountNeededForMarco);
+  const amountNeededForProximo =
+    buyMode === "proximo" && nextGenCost != null
+      ? nextGenCost.sub(quantity).ceil()
+      : null;
+  const canReachProximo =
+    amountNeededForProximo == null || amountNeededForProximo.lte(Decimal.dZero) || maxAffordable.gte(amountNeededForProximo);
   const canPurchase =
     canBuy &&
     buyAmount >= 1 &&
-    (buyMode !== "marco" || canReachMarco);
+    (buyMode !== "marco" || canReachMarco) &&
+    (buyMode !== "proximo" || canReachProximo);
 
   return { amount: buyAmount, canPurchase };
 }

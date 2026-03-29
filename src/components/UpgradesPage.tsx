@@ -187,14 +187,14 @@ export function UpgradesPage() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Abas */}
-      <div className="flex shrink-0 border-b border-zinc-700/80 bg-zinc-900/40">
+      <div className="flex shrink-0 gap-2 px-4 pt-3 pb-2">
         <button
           type="button"
           onClick={() => setTab("geradores")}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition ${
+          className={`btn-3d flex-1 rounded-lg px-4 py-2.5 text-sm font-medium ${
             tab === "geradores"
-              ? "border-b-2 border-amber-400 bg-zinc-800/50 text-amber-400"
-              : "text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200"
+              ? "btn-3d--violet bg-violet-600 text-white"
+              : "btn-3d--zinc bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-zinc-200"
           }`}
         >
           Geradores
@@ -202,10 +202,10 @@ export function UpgradesPage() {
         <button
           type="button"
           onClick={() => setTab("tickets")}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition ${
+          className={`btn-3d flex-1 rounded-lg px-4 py-2.5 text-sm font-medium ${
             tab === "tickets"
-              ? "border-b-2 border-amber-400 bg-zinc-800/50 text-amber-400"
-              : "text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200"
+              ? "btn-3d--violet bg-violet-600 text-white"
+              : "btn-3d--zinc bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-zinc-200"
           }`}
         >
           Tickets

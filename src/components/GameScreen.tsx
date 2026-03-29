@@ -102,7 +102,7 @@ export function GameScreen() {
         <PrestigeBar />
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-2 py-2">
           {view === "game" ? (
-            <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">
+            <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden scrollbar-none">
               <GeneratorList />
             </div>
           ) : view === "upgrades" ? (

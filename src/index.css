@@ -71,6 +71,13 @@ body {
   background: rgb(39 39 42);
 }
 
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 h1 {
   font-size: 3.2em;
   line-height: 1.1;

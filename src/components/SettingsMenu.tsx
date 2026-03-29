@@ -12,10 +12,11 @@ type MenuTab = "geral" | "jogo";
 export function SettingsMenu({ currentView, onNavigate }: SettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState<MenuTab>("geral");
+  const [confirmingReset, setConfirmingReset] = useState(false);
   const showFPS = useGameSelector((state) => state.options?.showFPS ?? false);
   const dispatch = useGameDispatch();
 
-  const close = useCallback(() => setIsOpen(false), []);
+  const close = useCallback(() => { setIsOpen(false); setConfirmingReset(false); }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -54,11 +55,11 @@ export function SettingsMenu({ currentView, onNavigate }: SettingsMenuProps) {
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-zinc-700/80 bg-zinc-900/40">
-              <TabButton active={tab === "geral"} onClick={() => setTab("geral")}>
+            <div className="flex gap-2 px-4 pt-3 pb-2">
+              <TabButton active={tab === "geral"} onClick={() => { setTab("geral"); setConfirmingReset(false); }}>
                 Geral
               </TabButton>
-              <TabButton active={tab === "jogo"} onClick={() => setTab("jogo")}>
+              <TabButton active={tab === "jogo"} onClick={() => { setTab("jogo"); setConfirmingReset(false); }}>
                 Jogo
               </TabButton>
             </div>
@@ -91,12 +92,34 @@ export function SettingsMenu({ currentView, onNavigate }: SettingsMenuProps) {
 
               {tab === "jogo" && (
                 <>
-                  <MenuButton
-                    label="Resetar Jogo"
-                    description="Apaga todo o progresso e recomeça do zero"
-                    variant="danger"
-                    onClick={() => { dispatch({ type: "RESET_GAME" }); close(); }}
-                  />
+                  {!confirmingReset ? (
+                    <MenuButton
+                      label="Resetar Jogo"
+                      description="Apaga todo o progresso e recomeça do zero"
+                      variant="danger"
+                      onClick={() => setConfirmingReset(true)}
+                    />
+                  ) : (
+                    <div className="flex flex-col gap-2 rounded-lg border border-red-500/50 bg-red-950/40 p-4">
+                      <span className="text-sm font-medium text-red-300">Tem certeza? Todo o progresso será perdido.</span>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { dispatch({ type: "RESET_GAME" }); close(); }}
+                          className="btn-3d btn-3d--red flex-1 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600"
+                        >
+                          Confirmar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingReset(false)}
+                          className="btn-3d btn-3d--zinc flex-1 rounded-lg bg-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -116,10 +139,10 @@ function TabButton({ active, onClick, children }: {
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 px-4 py-3 text-sm font-medium transition ${
+      className={`btn-3d flex-1 rounded-lg px-4 py-2.5 text-sm font-medium ${
         active
-          ? "border-b-2 border-amber-400 bg-zinc-800/50 text-amber-400"
-          : "text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200"
+          ? "btn-3d--violet bg-violet-600 text-white"
+          : "btn-3d--zinc bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-zinc-200"
       }`}
     >
       {children}
@@ -157,8 +180,9 @@ function MenuButton({ label, description, variant = "default", onClick }: {
   variant?: "default" | "danger";
   onClick: () => void;
 }) {
-  const classes = variant === "danger"
-    ? "btn-3d btn-3d--zinc bg-zinc-700 text-red-400 hover:bg-zinc-600"
+  const isDanger = variant === "danger";
+  const classes = isDanger
+    ? "btn-3d btn-3d--red bg-red-700 text-white hover:bg-red-600"
     : "btn-3d btn-3d--zinc bg-zinc-700 text-zinc-200 hover:bg-zinc-600";
   return (
     <button
@@ -168,7 +192,7 @@ function MenuButton({ label, description, variant = "default", onClick }: {
     >
       <span className="text-sm font-medium">{label}</span>
       {description && (
-        <span className="text-xs text-zinc-500">{description}</span>
+        <span className={`text-xs ${isDanger ? "text-red-100/80" : "text-zinc-500"}`}>{description}</span>
       )}
     </button>
   );

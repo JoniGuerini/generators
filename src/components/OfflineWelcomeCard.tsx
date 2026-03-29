@@ -4,6 +4,7 @@ import { formatNumber, formatTime } from "@/utils/format";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { getCurrentMilestoneCount, getCoinsFromClaiming } from "@/utils/milestones";
 import { getMilestoneRewardMultiplier } from "@/engine/upgrades";
+import { useT } from "@/locale";
 
 interface OfflineWelcomeCardProps {
   gains: OfflineGains;
@@ -20,6 +21,7 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
   const showCard = hasAnyGain(gains);
   const offlineSeconds = gains.offlineTimeMs / 1000;
   const dispatch = useGameDispatch();
+  const t = useT();
 
   const totalPending = useGameSelector((state) => {
     let coins = Decimal.dZero;
@@ -52,10 +54,10 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
             id="offline-welcome-title"
             className="text-lg font-bold text-white"
           >
-            Bem-vindo de volta!
+            {t.offline.title}
           </h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Você esteve ausente por{" "}
+            {t.offline.awayFor}{" "}
             <span className="font-semibold text-white">
               {formatTime(offlineSeconds)}
             </span>
@@ -64,14 +66,14 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
 
         <div className="px-5 pb-4">
           <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-            Recursos gerados offline
+            {t.offline.offlineGains}
           </p>
           <div className="space-y-2">
             {gains.baseResource.gt(Decimal.dZero) && (
               <div className="flex flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                 <div className="flex items-center gap-1.5">
                   <span className="text-cyan-400 text-xs" aria-hidden>●</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Recurso</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.offline.resource}</span>
                 </div>
                 <span className="text-lg font-bold tabular-nums text-white">
                   +{formatNumber(gains.baseResource)}
@@ -82,7 +84,7 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
               <div className="flex flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                 <div className="flex items-center gap-1.5">
                   <span className="text-amber-400 text-xs" aria-hidden>▲</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Tickets</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.offline.tickets}</span>
                 </div>
                 <span className="text-lg font-bold tabular-nums text-white">
                   +{formatNumber(gains.ticketCurrency)}
@@ -93,7 +95,7 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
               <div className="flex flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                 <div className="flex items-center gap-1.5">
                   <span className="text-purple-400 text-xs" aria-hidden>◆</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Melhorias pendentes</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.offline.pendingUpgrades}</span>
                 </div>
                 <span className="text-lg font-bold tabular-nums text-white">
                   {formatNumber(totalPending)}
@@ -116,7 +118,7 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
                 : "btn-3d--zinc bg-zinc-700 hover:bg-zinc-600"
             }`}
           >
-            {hasPending ? "Resgatar e continuar" : "Continuar"}
+            {hasPending ? t.offline.claimAndContinue : t.offline.continue}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import type { GameState } from "@/store/gameState";
 import { getInitialState } from "@/store/gameState";
 import { useRawGameStateForPersist } from "@/store/useGameStore";
 import { advanceMilestoneTargetIndex } from "@/utils/milestones";
+import { loadSharedSettings, saveSharedSettings } from "@/utils/sharedSettings";
 
 const SAVE_KEY = "idle-game-save";
 const SAVE_VERSION = 5;
@@ -35,7 +36,7 @@ interface SavedState {
     upgradeCritMultiplierRank?: number;
   }[];
   lastUpdateTimestamp: number;
-  options?: { showFPS?: boolean };
+  options?: { showFPS?: boolean; sfxEnabled?: boolean; sfxVolume?: number; sfxStyle?: string; locale?: string };
 }
 
 function serialize(state: GameState): string {
@@ -66,6 +67,7 @@ function serialize(state: GameState): string {
       upgradeCritMultiplierRank: g.upgradeCritMultiplierRank,
     })),
     lastUpdateTimestamp: state.lastUpdateTimestamp,
+    options: state.options,
   };
   return JSON.stringify(saved);
 }
@@ -76,6 +78,7 @@ function deserialize(raw: string): GameState | null {
     if (saved.version !== SAVE_VERSION && saved.version !== 1 && saved.version !== 2 && saved.version !== 3 && saved.version !== 4) return null;
     const initial = getInitialState();
     const now = Date.now();
+    const shared = loadSharedSettings();
     const byId = new Map(
       saved.generators?.map((g) => {
         const q = Decimal.fromString(g.quantity);
@@ -130,7 +133,13 @@ function deserialize(raw: string): GameState | null {
           : Decimal.fromString(saved.prestigeThresholdsClaimed))
         : Decimal.dZero,
       generators,
-      options: { showFPS: Boolean(saved.options?.showFPS ?? false) },
+      options: {
+        showFPS: shared.showFPS,
+        sfxEnabled: shared.sfxEnabled,
+        sfxVolume: shared.sfxVolume,
+        sfxStyle: shared.sfxStyle,
+        locale: shared.locale,
+      },
       lastUpdateTimestamp: saved.lastUpdateTimestamp ?? Date.now(),
     };
   } catch {
@@ -156,7 +165,9 @@ export function usePersist() {
 
   useEffect(() => {
     const save = () => {
-      localStorage.setItem(SAVE_KEY, serialize(stateRef.current));
+      const s = stateRef.current;
+      localStorage.setItem(SAVE_KEY, serialize(s));
+      saveSharedSettings(s.options);
       lastSaveTimeRef.current = Date.now();
     };
 

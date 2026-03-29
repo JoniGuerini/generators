@@ -6,10 +6,12 @@ import {
   getEffectiveProductionPerCycle,
 } from "@/engine/upgrades";
 import { formatNumber, formatTime } from "@/utils/format";
+import { useT } from "@/locale";
 
 const PRESTIGE_THRESHOLD = Decimal.pow(10, 33);
 
 export function PrestigeBar() {
+  const t = useT();
   const { baseResource, basePerSec } = useGameSelector((state) => {
     const gen1 = state.generators.find((g) => g.id === "generator1");
     let perSec = Decimal.dZero;
@@ -42,7 +44,7 @@ export function PrestigeBar() {
 
   let etaText = "∞";
   if (baseResource.gte(PRESTIGE_THRESHOLD)) {
-    etaText = "Pronto";
+    etaText = t.prestige.ready;
   } else if (basePerSec.gt(Decimal.dZero)) {
     const remaining = PRESTIGE_THRESHOLD.sub(baseResource);
     const secondsLeft = remaining.div(basePerSec).toNumber();
@@ -63,7 +65,7 @@ export function PrestigeBar() {
             {formatNumber(baseResource)}
           </span>
           <span className="text-sm font-medium tabular-nums text-white drop-shadow-[0_0_2px_rgba(0,0,0,0.9)]">
-            {etaText === "Pronto"
+            {etaText === t.prestige.ready
               ? etaText
               : etaText === "∞"
                 ? "∞"

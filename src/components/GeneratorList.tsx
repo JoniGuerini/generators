@@ -4,11 +4,13 @@ import { getVisibleGeneratorIds } from "@/store/gameState";
 import { getCurrentMilestoneCount, getCoinsFromClaiming } from "@/utils/milestones";
 import { getMilestoneRewardMultiplier } from "@/engine/upgrades";
 import { formatNumber } from "@/utils/format";
+import { useT } from "@/locale";
 import { GeneratorRow } from "./GeneratorRow";
 
 export function GeneratorList() {
   const visibleIds = useGameSelector(getVisibleGeneratorIds, (a, b) => a.join() === b.join());
   const dispatch = useGameDispatch();
+  const t = useT();
 
   const totalPending = useGameSelector((state) => {
     let coins = Decimal.dZero;
@@ -50,8 +52,8 @@ export function GeneratorList() {
         >
           <span className="text-sm font-medium">
             {hasPending
-              ? <>Resgatar {formatNumber(totalPending)} pontos de marcos</>
-              : "Nenhum marco pendente"}
+              ? t.generatorList.claimAll(formatNumber(totalPending))
+              : t.generatorList.noPending}
           </span>
         </button>
         <div className="w-[160px] shrink-0" />

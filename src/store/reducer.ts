@@ -41,6 +41,10 @@ export type GameAction =
   | { type: "BUY_GENERATOR_COST_HALF_UPGRADE" }
   | { type: "BUY_MILESTONE_DOUBLER_UPGRADE" }
   | { type: "TOGGLE_FPS" }
+  | { type: "TOGGLE_SFX" }
+  | { type: "SET_SFX_VOLUME"; volume: number }
+  | { type: "SET_SFX_STYLE"; style: string }
+  | { type: "SET_LOCALE"; locale: string }
   | { type: "RESET_OPTIONS" }
   | { type: "RESET_GAME" }
   | { type: "REPLACE_STATE"; state: GameState };
@@ -404,20 +408,44 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "TOGGLE_FPS": {
-      const currentShowFPS = state.options?.showFPS ?? false;
       return {
         ...state,
-        options: {
-          ...(state.options || {}),
-          showFPS: !currentShowFPS,
-        },
+        options: { ...state.options, showFPS: !state.options.showFPS },
+      };
+    }
+
+    case "TOGGLE_SFX": {
+      return {
+        ...state,
+        options: { ...state.options, sfxEnabled: !state.options.sfxEnabled },
+      };
+    }
+
+    case "SET_SFX_VOLUME": {
+      return {
+        ...state,
+        options: { ...state.options, sfxVolume: action.volume },
+      };
+    }
+
+    case "SET_SFX_STYLE": {
+      return {
+        ...state,
+        options: { ...state.options, sfxStyle: action.style },
+      };
+    }
+
+    case "SET_LOCALE": {
+      return {
+        ...state,
+        options: { ...state.options, locale: action.locale },
       };
     }
 
     case "RESET_OPTIONS": {
       return {
         ...state,
-        options: { showFPS: false },
+        options: { showFPS: false, sfxEnabled: true, sfxVolume: 50, sfxStyle: "soft", locale: "pt-BR" },
       };
     }
 

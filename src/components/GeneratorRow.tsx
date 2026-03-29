@@ -22,6 +22,7 @@ import {
 import { getBuyAmount, getNextGeneratorCostInCurrent } from "@/utils/computeGeneratorPurchase";
 import { GENERATOR_IDS } from "@/engine/constants";
 import { useHoldToBuyGenerator } from "@/hooks/useHoldToBuyGenerator";
+import { useT } from "@/locale";
 
 interface GeneratorRowProps {
   id: GeneratorId;
@@ -50,6 +51,7 @@ const TOOLTIP_GAP = 6;
 export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps) {
   const def = GENERATOR_DEFS[id];
   const { buyMode } = useBuyMode();
+  const t = useT();
   const {
     gen,
     baseResource,
@@ -261,13 +263,13 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
         <div
           className="flex h-[40px] w-[120px] shrink-0 items-center justify-center rounded-md border-2 border-dashed border-zinc-500 bg-zinc-700/80 text-sm font-bold text-zinc-400"
           aria-label={def.name}
-          title="Gerador bloqueado — compre para desbloquear"
+          title={t.generator.lockedTitle}
         >
           {id.replace("generator", "")}
         </div>
         <div className="flex h-[40px] min-w-0 flex-1 items-center justify-center rounded-md border-2 border-dashed border-zinc-600 bg-zinc-800/60">
           <span className="text-center text-sm font-medium text-zinc-500">
-            Compre para desbloquear
+            {t.generator.buyToUnlock}
           </span>
         </div>
         <div
@@ -299,7 +301,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                   <div className="flex w-[7rem] flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="text-cyan-400 text-xs" aria-hidden>●</span>
-                      <span className="text-xs font-bold uppercase tracking-wider text-white">Recurso</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.resource}</span>
                     </div>
                     <span className={`truncate text-sm font-bold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>
                       {formatNumber(displayCost)}
@@ -308,7 +310,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                   <div className="flex w-[7rem] flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="text-amber-400 text-xs" aria-hidden>▲</span>
-                      <span className="text-xs font-bold uppercase tracking-wider text-white">Tickets</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.tickets}</span>
                     </div>
                     <span className={`truncate text-sm font-bold tabular-nums ${lacksTickets ? "text-red-400" : "text-amber-200"}`}>
                       {formatNumber(Decimal.fromNumber(ticketsRequired))}
@@ -321,7 +323,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                       <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-red-600 text-[8px] font-bold text-white" aria-hidden>
                         {def.produces.replace("generator", "")}
                       </span>
-                      <span className="text-xs font-bold uppercase tracking-wider text-white">Gerador</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.generator}</span>
                     </div>
                     <span className={`truncate text-sm font-bold tabular-nums ${lacksPrev ? "text-red-400" : "text-white"}`}>
                       {formatNumber(displayPrevCost)}
@@ -332,7 +334,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
             </div>
           )}
           <span className="pointer-events-none shrink-0">
-            Comprar{amountForDisplay > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(amountForDisplay))}</span></> : null}
+            {t.generator.buy}{amountForDisplay > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(amountForDisplay))}</span></> : null}
           </span>
           <button
             type="button"
@@ -344,11 +346,11 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
             disabled={!canClickBuy}
             title={
               !showAsUnaffordable
-                ? "Clique ou segure para comprar em série"
+                ? t.generator.holdToBuy
                 : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`
             }
             className="absolute inset-0 touch-manipulation rounded-md outline-none select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-0"
-            aria-label="Comprar gerador para desbloquear"
+            aria-label={t.generator.buyUnlockAria}
           />
         </div>
       </div>
@@ -391,20 +393,20 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
           )}
           <div className="flex flex-col gap-1.5 text-left">
             <div className="flex items-center justify-between gap-4 whitespace-nowrap">
-              <span className="text-xs text-zinc-400">Quantidade atual</span>
+              <span className="text-xs text-zinc-400">{t.generator.currentQty}</span>
               <span className="text-sm font-semibold tabular-nums text-white">
                 {formatNumber(quantity)}
               </span>
             </div>
             <div className="flex items-center justify-between gap-4 whitespace-nowrap">
-              <span className="text-xs text-zinc-400">Próximo marco</span>
+              <span className="text-xs text-zinc-400">{t.generator.nextMilestone}</span>
               <span className="text-sm font-semibold tabular-nums text-purple-300">
                 {formatNumber(nextThreshold)}
               </span>
             </div>
             {canClaim && (
               <div className="mt-0.5 border-t border-zinc-600 pt-1.5 text-center text-xs text-purple-300">
-                Clique para resgatar {pendingMilestones} marco{pendingMilestones !== 1 ? "s" : ""} (◆ {formatNumber(coinsToClaim)})
+                {t.generator.claimMilestones(pendingMilestones, formatNumber(coinsToClaim))}
               </div>
             )}
           </div>
@@ -515,7 +517,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                 <div className="flex w-[7rem] flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                   <div className="flex items-center gap-1.5">
                     <span className="text-cyan-400 text-xs" aria-hidden>●</span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-white">Recurso</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.resource}</span>
                   </div>
                   <span className={`truncate text-sm font-bold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>
                     {formatNumber(displayCost)}
@@ -524,7 +526,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                 <div className="flex w-[7rem] flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                   <div className="flex items-center gap-1.5">
                     <span className="text-amber-400 text-xs" aria-hidden>▲</span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-white">Tickets</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.tickets}</span>
                   </div>
                   <span className={`truncate text-sm font-bold tabular-nums ${lacksTickets ? "text-red-400" : "text-amber-200"}`}>
                     {formatNumber(Decimal.fromNumber(ticketsRequired))}
@@ -537,7 +539,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                     <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-red-600 text-[8px] font-bold text-white" aria-hidden>
                       {def.produces.replace("generator", "")}
                     </span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-white">Gerador</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.generator}</span>
                   </div>
                   <span className={`truncate text-sm font-bold tabular-nums ${lacksPrev ? "text-red-400" : "text-white"}`}>
                     {formatNumber(displayPrevCost)}
@@ -549,10 +551,10 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
         )}
         <span className="pointer-events-none shrink-0">
           {buyMode === "proximo" && isLastGenerator
-            ? "Comprar"
+            ? t.generator.buy
             : buyMode === "proximo" && alreadyHasEnoughForNext
-              ? "✓ Pronto"
-              : <>Comprar{amountForDisplay > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(amountForDisplay))}</span></> : null}</>}
+              ? t.generator.ready
+              : <>{t.generator.buy}{amountForDisplay > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(amountForDisplay))}</span></> : null}</>}
         </span>
         <button
           type="button"
@@ -564,11 +566,11 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
           disabled={!canClickBuy}
           title={
             !showAsUnaffordable
-              ? "Clique ou segure para comprar em série"
+              ? t.generator.holdToBuy
               : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`
           }
           className="absolute inset-0 touch-manipulation rounded-md outline-none select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-          aria-label="Comprar gerador"
+          aria-label={t.generator.buyGeneratorAria}
         />
       </div>
     </div>

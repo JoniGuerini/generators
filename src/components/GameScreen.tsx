@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useContext } from "react";
 import { useGameLoop } from "@/hooks/useGameLoop";
 import { usePersist } from "@/hooks/usePersist";
 import { useWakeLock } from "@/hooks/useWakeLock";
+import { useButtonSounds } from "@/hooks/useButtonSounds";
 import { BuyModeProvider } from "@/contexts/BuyModeContext";
-import { StoreContext, useGameDispatch } from "@/store/useGameStore";
+import { StoreContext, useGameDispatch, useGameSelector, shallowEqual } from "@/store/useGameStore";
 import {
   simulateOfflineProgress,
   MIN_OFFLINE_MS,
@@ -47,7 +48,10 @@ export function GameScreen() {
   useGameLoop();
   usePersist();
   useWakeLock();
-  
+
+  const options = useGameSelector((s) => s.options, shallowEqual);
+  useButtonSounds(options);
+
   const store = useContext(StoreContext);
   const dispatch = useGameDispatch();
   const [view, setView] = useState<MainView>("game");
@@ -113,7 +117,12 @@ export function GameScreen() {
             </div>
           )}
         </main>
-        <BottomMenu currentView={view} onNavigate={setView} />
+        <BottomMenu
+          currentView={view}
+          onNavigate={setView}
+          options={options}
+          dispatch={dispatch}
+        />
       </div>
       {offlineGains && (
         <OfflineWelcomeCard

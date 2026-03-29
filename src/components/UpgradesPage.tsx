@@ -2,6 +2,7 @@ import { useState } from "react";
 import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { GENERATOR_DEFS } from "@/engine/constants";
+import { useT } from "@/locale";
 import {
   getEffectiveCycleTimeSeconds,
   getEffectiveProductionPerCycle,
@@ -38,9 +39,11 @@ function UpgradeRow({
   onBuy,
   buttonLabel,
   maxed,
+  maxedLabel = "Máx.",
   buttonVariant = "default",
   width,
   flexible,
+  holdTitle,
 }: {
   label: React.ReactNode;
   sublabel?: string;
@@ -49,10 +52,11 @@ function UpgradeRow({
   onBuy: () => void;
   buttonLabel: string;
   maxed?: boolean;
-  /** "base" = cor da moeda base (●); "default" = roxo */
+  maxedLabel?: string;
   buttonVariant?: "default" | "base";
   width?: string;
   flexible?: boolean;
+  holdTitle?: string;
 }) {
   const rowWidth = width || "18.5rem";
   const buttonActiveClass =
@@ -76,7 +80,7 @@ function UpgradeRow({
           className="flex h-9 shrink-0 items-center justify-center rounded-lg bg-zinc-700 px-3 text-xs font-medium text-zinc-400"
           style={{ minWidth: UPGRADE_BUTTON_WIDTH }}
         >
-          Máx.
+          {maxedLabel}
         </span>
       ) : (
         <button
@@ -87,7 +91,7 @@ function UpgradeRow({
           onLostPointerCapture={hold.onLostPointerCapture}
           onKeyDown={hold.onKeyDown}
           disabled={!canBuy}
-          title={cost ? `Custo: ${cost} — segure para comprar em série` : undefined}
+          title={cost ? `${cost}${holdTitle ? ` — ${holdTitle}` : ""}` : undefined}
           style={{ minWidth: UPGRADE_BUTTON_WIDTH }}
           className={`flex h-9 shrink-0 items-center justify-center rounded-lg px-3 text-sm font-medium whitespace-nowrap touch-manipulation select-none ${
             canBuy ? buttonActiveClass : "btn-3d btn-3d--zinc cursor-not-allowed bg-zinc-700 text-zinc-500"
@@ -102,6 +106,7 @@ function UpgradeRow({
 
 export function UpgradesPage() {
   const dispatch = useGameDispatch();
+  const t = useT();
   const [tab, setTab] = useState<UpgradesTab>("geradores");
 
   // O UpgradesPage precisa de muitas coisas, mas a grande diferença é que ele _não_ precisa de:
@@ -197,7 +202,7 @@ export function UpgradesPage() {
               : "btn-3d--zinc bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-zinc-200"
           }`}
         >
-          Geradores
+          {t.upgradesPage.generators}
         </button>
         <button
           type="button"
@@ -208,7 +213,7 @@ export function UpgradesPage() {
               : "btn-3d--zinc bg-zinc-700 text-zinc-400 hover:bg-zinc-600 hover:text-zinc-200"
           }`}
         >
-          Tickets
+          {t.upgradesPage.tickets}
         </button>
       </div>
 
@@ -222,7 +227,7 @@ export function UpgradesPage() {
                 flexible
                 label={
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Tickets por segundo</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.ticketsPerSecond}</span>
                     <div className="flex items-center gap-1.5 text-sm font-medium">
                       <span className="text-zinc-400">{formatNumber(Decimal.fromNumber(ticketsPerSec))}</span>
                       <span className="text-amber-400/80">→</span>
@@ -231,7 +236,7 @@ export function UpgradesPage() {
                     </div>
                   </div>
                 }
-                sublabel={`ranque ${upgradeTicketRateRank}`}
+                sublabel={`${t.upgradesPage.rank} ${upgradeTicketRateRank}`}
                 cost={`◆ ${formatNumber(costTicketRate)}`}
                 canBuy={canBuyTicketRate}
                 onBuy={() => dispatch({ type: "BUY_TICKET_RATE_UPGRADE" })}
@@ -244,7 +249,7 @@ export function UpgradesPage() {
                 flexible
                 label={
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Dobrar produção</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.doubleProduction}</span>
                     <div className="flex items-center gap-1.5 text-sm font-medium">
                       <span className="text-zinc-400">{formatNumber(Decimal.fromNumber(ticketsPerSec))}</span>
                       <span className="text-amber-400/80">→</span>
@@ -253,7 +258,7 @@ export function UpgradesPage() {
                     </div>
                   </div>
                 }
-                sublabel={`ranque ×2: ${upgradeTicketMultiplierRank}`}
+                sublabel={`${t.upgradesPage.rank} ×2: ${upgradeTicketMultiplierRank}`}
                 cost={`◆ ${formatNumber(costTicketMultiplier)}`}
                 canBuy={canBuyTicketMultiplier}
                 onBuy={() => dispatch({ type: "BUY_TICKET_MULTIPLIER_UPGRADE" })}
@@ -266,7 +271,7 @@ export function UpgradesPage() {
                 flexible
                 label={
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Trocar recurso por +1 ▲/s</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.tradeForTickets}</span>
                     <div className="flex items-center gap-1.5 text-sm font-medium">
                       <span className="text-zinc-400">{formatNumber(Decimal.fromNumber(ticketsPerSec))}</span>
                       <span className="text-amber-400/80">→</span>
@@ -275,7 +280,7 @@ export function UpgradesPage() {
                     </div>
                   </div>
                 }
-                sublabel={`trocas feitas: ${ticketTradeMilestoneCount}`}
+                sublabel={`${t.upgradesPage.tradesDone}: ${ticketTradeMilestoneCount}`}
                 cost={`● ${formatNumber(tradeCost)}`}
                 canBuy={canTrade}
                 onBuy={() => dispatch({ type: "TRADE_BASE_FOR_TICKET_RATE" })}
@@ -297,8 +302,8 @@ export function UpgradesPage() {
                     flexible
                     label={
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Custo ÷2 (todos os geradores)</span>
-                        <span className="text-sm font-medium text-zinc-400">ranque {rank}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.halfCostAll}</span>
+                        <span className="text-sm font-medium text-zinc-400">{t.upgradesPage.rank} {rank}</span>
                       </div>
                     }
                     cost={`◆ ${formatNumber(costHalf)}`}
@@ -325,7 +330,7 @@ export function UpgradesPage() {
                     flexible
                     label={
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Dobrar <span className="text-violet-400">◆</span> por marco</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.doubleMilestoneReward}</span>
                         <div className="flex items-center gap-1.5 text-sm font-medium">
                           <span className="text-zinc-400">×{currentMult}</span>
                           <span className="text-violet-400/80">→</span>
@@ -333,7 +338,7 @@ export function UpgradesPage() {
                         </div>
                       </div>
                     }
-                    sublabel={`ranque ${rank}`}
+                    sublabel={`${t.upgradesPage.rank} ${rank}`}
                     cost={`◆ ${formatNumber(costDoubler)}`}
                     canBuy={canBuyDoubler}
                     onBuy={() =>
@@ -347,7 +352,7 @@ export function UpgradesPage() {
 
             <div>
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                Por gerador
+                {t.upgradesPage.perGenerator}
               </h3>
               <ul className="space-y-2">
                 {generatorIdsForUpgrades.map((id) => {
@@ -408,7 +413,7 @@ export function UpgradesPage() {
                           flexible
                           label={
                             <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Tempo de ciclo</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.cycleTime}</span>
                               <div className="flex items-center gap-1.5 text-sm font-medium">
                                 <span className="text-zinc-400">{formatTime(currentCycle)}</span>
                                 {cycleRank < maxCycleRank && (
@@ -420,7 +425,7 @@ export function UpgradesPage() {
                               </div>
                             </div>
                           }
-                          sublabel={`ranque ${cycleRank}${
+                          sublabel={`${t.upgradesPage.rank} ${cycleRank}${
                             maxCycleRank > 0 ? ` / ${maxCycleRank}` : ""
                           }`}
                           cost={
@@ -438,12 +443,13 @@ export function UpgradesPage() {
                           }
                           buttonLabel={costCycle ? `◆ ${formatNumber(costCycle)}` : "—"}
                           maxed={cycleRank >= maxCycleRank}
+                          maxedLabel={t.upgradesPage.maxed}
                         />
                         <UpgradeRow
                           flexible
                           label={
                             <div className="flex flex-col gap-0.5">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Produção por ciclo</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.productionPerCycle}</span>
                               <div className="flex items-center gap-1.5 text-sm font-medium">
                                 <span className="text-zinc-400">{formatNumber(currentProd)}</span>
                                 <span className="text-violet-400/80">→</span>
@@ -451,7 +457,7 @@ export function UpgradesPage() {
                               </div>
                             </div>
                           }
-                          sublabel={`ranque ${prodRank}`}
+                          sublabel={`${t.upgradesPage.rank} ${prodRank}`}
                           cost={`◆ ${formatNumber(costProd)}`}
                           canBuy={canBuyProd}
                           onBuy={() =>
@@ -482,7 +488,7 @@ export function UpgradesPage() {
                                 flexible
                                 label={
                                   <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Chance de crítico</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.critChance}</span>
                                     <div className="flex items-center gap-1.5 text-sm font-medium">
                                       <span className="text-zinc-400">{(currentChance * 100).toFixed(1)}%</span>
                                       {critRank < MAX_CRIT_CHANCE_RANK && (
@@ -494,18 +500,19 @@ export function UpgradesPage() {
                                     </div>
                                   </div>
                                 }
-                                sublabel={`ranque ${critRank}${MAX_CRIT_CHANCE_RANK > 0 ? ` / ${MAX_CRIT_CHANCE_RANK}` : ""}`}
+                                sublabel={`${t.upgradesPage.rank} ${critRank}${MAX_CRIT_CHANCE_RANK > 0 ? ` / ${MAX_CRIT_CHANCE_RANK}` : ""}`}
                                 cost={costCrit ? `◆ ${formatNumber(costCrit)}` : ""}
                                 canBuy={canBuyCrit ?? false}
                                 onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "critChance" })}
                                 buttonLabel={costCrit ? `◆ ${formatNumber(costCrit)}` : "—"}
                                 maxed={critRank >= MAX_CRIT_CHANCE_RANK}
+                                maxedLabel={t.upgradesPage.maxed}
                               />
                               <UpgradeRow
                                 flexible
                                 label={
                                   <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Eficiência do crítico</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.critEfficiency}</span>
                                     <div className="flex items-center gap-1.5 text-sm font-medium">
                                       <span className="text-zinc-400">×{currentCritMult}</span>
                                       <span className="text-violet-400/80">→</span>
@@ -513,7 +520,7 @@ export function UpgradesPage() {
                                     </div>
                                   </div>
                                 }
-                                sublabel={`ranque ${critMultRank}`}
+                                sublabel={`${t.upgradesPage.rank} ${critMultRank}`}
                                 cost={`◆ ${formatNumber(costCritMult)}`}
                                 canBuy={canBuyCritMult}
                                 onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "critMultiplier" })}

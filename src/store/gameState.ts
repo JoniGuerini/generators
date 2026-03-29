@@ -50,6 +50,10 @@ export interface GameState {
   lastUpdateTimestamp: number;
   options: {
     showFPS: boolean;
+    sfxEnabled: boolean;
+    sfxVolume: number;
+    sfxStyle: string;
+    locale: string;
   };
 }
 
@@ -102,6 +106,6 @@ export function getInitialState(): GameState {
     prestigeThresholdsClaimed: ZERO,
     generators: GENERATOR_IDS.map((id) => initialGeneratorState(id)),
     lastUpdateTimestamp: Date.now(),
-    options: { showFPS: false },
+    options: { showFPS: false, sfxEnabled: true, sfxVolume: 50, sfxStyle: "soft", locale: "pt-BR" },
   };
 }

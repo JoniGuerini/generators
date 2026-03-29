@@ -3,9 +3,11 @@ import { useGameSelector, shallowEqual } from "@/store/useGameStore";
 import { useFPS } from "@/hooks/useFPS";
 import { formatNumber } from "@/utils/format";
 import { getTicketsPerSecond } from "@/engine/upgrades";
+import { useT } from "@/locale";
 
 export function Header() {
   const fps = useFPS();
+  const t = useT();
   const { baseResource, ticketCurrency, milestoneCurrency, prestigePoints, showFPS, ticketsPerSec } = useGameSelector((state) => ({
     baseResource: state.baseResource,
     ticketCurrency: state.ticketCurrency,
@@ -15,35 +17,33 @@ export function Header() {
     ticketsPerSec: getTicketsPerSecond(
       state.upgradeTicketRateRank,
       state.ticketTradeMilestoneCount,
-      state.upgradeTicketMultiplierRank
+      state.upgradeTicketMultiplierRank,
     ),
   }), shallowEqual);
 
   return (
     <header className="sticky top-0 z-20 relative flex items-center justify-center bg-[#0D0D0D] px-2 py-3 shadow min-h-[64px]">
       <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
-        {/* Recurso base */}
         <div
           className="flex w-[8rem] sm:w-[10rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
-          title="Recurso base"
+          title={t.header.resourceTooltip}
         >
           <div className="flex items-center gap-1.5">
             <span className="text-cyan-400 text-xs" aria-hidden>●</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Recurso</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.header.resource}</span>
           </div>
           <span className="truncate text-lg font-bold tabular-nums text-white">
             {formatNumber(baseResource)}
           </span>
         </div>
 
-        {/* Tickets */}
         <div
           className="flex w-[8rem] sm:w-[10rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
-          title={`Tickets — ${formatNumber(Decimal.fromNumber(ticketsPerSec))}/s`}
+          title={`${t.header.ticketsTooltip} — ${formatNumber(Decimal.fromNumber(ticketsPerSec))}/s`}
         >
           <div className="flex items-center gap-1.5">
             <span className="text-amber-400 text-xs" aria-hidden>▲</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Tickets</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.header.tickets}</span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-lg font-bold tabular-nums text-amber-200">
@@ -55,28 +55,26 @@ export function Header() {
           </div>
         </div>
 
-        {/* Moeda de marcos */}
         <div
           className="flex w-[8rem] sm:w-[10rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
-          title="Pontos de melhoria"
+          title={t.header.upgradesTooltip}
         >
           <div className="flex items-center gap-1.5">
             <span className="text-purple-400 text-xs" aria-hidden>◆</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Melhorias</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.header.upgrades}</span>
           </div>
           <span className="truncate text-lg font-bold tabular-nums text-purple-200">
             {formatNumber(milestoneCurrency)}
           </span>
         </div>
 
-        {/* Pontos de prestígio */}
         <div
           className="flex w-[8rem] sm:w-[10rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
-          title="Pontos de prestígio (1 ponto a cada 1 Dc de recurso)"
+          title={t.header.prestigeTooltip}
         >
           <div className="flex items-center gap-1.5">
             <span className="text-amber-500 text-xs" aria-hidden>★</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">Prestígio</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.header.prestige}</span>
           </div>
           <span className="truncate text-lg font-bold tabular-nums text-amber-100">
             {formatNumber(prestigePoints)}
@@ -84,14 +82,13 @@ export function Header() {
         </div>
       </div>
 
-      {/* FPS — canto direito absoluto, não afeta o centro */}
       {showFPS && (
         <div
           className="absolute right-2 top-1/2 -translate-y-1/2 flex w-[5rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
-          title="Frames por segundo"
+          title={t.header.fpsTooltip}
         >
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">FPS</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.header.fps}</span>
           </div>
           <span className={`text-lg font-bold tabular-nums ${fps >= 55 ? "text-green-400" : fps >= 30 ? "text-amber-400" : "text-red-400"}`}>
             {fps}

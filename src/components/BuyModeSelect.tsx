@@ -1,19 +1,20 @@
 import { useRef, useCallback } from "react";
 import { useBuyMode } from "@/contexts/BuyModeContext";
 import type { BuyMode } from "@/contexts/BuyModeContext";
-
-const OPTIONS: { value: BuyMode; label: string }[] = [
-  { value: "1x", label: "1x" },
-  { value: "1%", label: "1%" },
-  { value: "10%", label: "10%" },
-  { value: "50%", label: "50%" },
-  { value: "100%", label: "100%" },
-  { value: "marco", label: "Marco" },
-  { value: "proximo", label: "Próximo" },
-];
+import { useT } from "@/locale";
 
 export function BuyModeSelect() {
   const { buyMode, setBuyMode } = useBuyMode();
+  const t = useT();
+  const OPTIONS: { value: BuyMode; label: string }[] = [
+    { value: "1x", label: "1x" },
+    { value: "1%", label: "1%" },
+    { value: "10%", label: "10%" },
+    { value: "50%", label: "50%" },
+    { value: "100%", label: "100%" },
+    { value: "marco", label: t.buyMode.marco },
+    { value: "proximo", label: t.buyMode.proximo },
+  ];
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -38,7 +39,7 @@ export function BuyModeSelect() {
       <button
         type="button"
         className="btn-3d btn-3d--zinc flex h-[40px] w-full min-w-0 items-center justify-center gap-2 rounded-md border border-zinc-600 bg-zinc-700 px-3 text-sm text-zinc-200 hover:bg-zinc-600 focus:outline-none focus:ring-0"
-        aria-label="Quantidade a comprar por clique"
+        aria-label={t.buyMode.ariaLabel}
         aria-haspopup="listbox"
       >
         {currentLabel}

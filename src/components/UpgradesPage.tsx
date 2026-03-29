@@ -11,7 +11,6 @@ import {
   getUpgradeCostProduction,
   getUpgradeCostGeneratorCostHalf,
   getTicketsPerSecond,
-  getUpgradeCostTicketRate,
   getUpgradeCostTicketMultiplier,
   getTicketTradeThreshold,
   getUpgradeCostMilestoneDoubler,
@@ -117,7 +116,6 @@ export function UpgradesPage() {
     milestoneCurrency,
     baseResource,
     ticketTradeMilestoneCount,
-    upgradeTicketRateRank,
     upgradeTicketMultiplierRank,
     upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank,
@@ -137,7 +135,6 @@ export function UpgradesPage() {
       milestoneCurrency: state.milestoneCurrency,
       baseResource: state.baseResource,
       ticketTradeMilestoneCount: state.ticketTradeMilestoneCount,
-      upgradeTicketRateRank: state.upgradeTicketRateRank,
       upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank,
       upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
       upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
@@ -147,7 +144,6 @@ export function UpgradesPage() {
     a.milestoneCurrency.equals(b.milestoneCurrency) &&
     a.baseResource.equals(b.baseResource) &&
     a.ticketTradeMilestoneCount === b.ticketTradeMilestoneCount &&
-    a.upgradeTicketRateRank === b.upgradeTicketRateRank &&
     a.upgradeTicketMultiplierRank === b.upgradeTicketMultiplierRank &&
     a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
     a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
@@ -162,28 +158,18 @@ export function UpgradesPage() {
   );
 
   const ticketsPerSec = getTicketsPerSecond(
-    upgradeTicketRateRank,
-    ticketTradeMilestoneCount,
-    upgradeTicketMultiplierRank
-  );
-  const nextTicketsRate = getTicketsPerSecond(
-    upgradeTicketRateRank + 1,
     ticketTradeMilestoneCount,
     upgradeTicketMultiplierRank
   );
   const nextTicketsMultiplier = getTicketsPerSecond(
-    upgradeTicketRateRank,
     ticketTradeMilestoneCount,
     upgradeTicketMultiplierRank + 1
   );
   const nextTicketsTrade = getTicketsPerSecond(
-    upgradeTicketRateRank,
     ticketTradeMilestoneCount + 1,
     upgradeTicketMultiplierRank
   );
 
-  const costTicketRate = getUpgradeCostTicketRate(upgradeTicketRateRank);
-  const canBuyTicketRate = milestoneCurrency.gte(costTicketRate);
   const costTicketMultiplier = getUpgradeCostTicketMultiplier(upgradeTicketMultiplierRank);
   const canBuyTicketMultiplier = milestoneCurrency.gte(costTicketMultiplier);
   const tradeCost = getTicketTradeThreshold(ticketTradeMilestoneCount);
@@ -221,28 +207,6 @@ export function UpgradesPage() {
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {tab === "tickets" ? (
           <div className="mx-auto max-w-4xl space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-lg text-amber-400" aria-hidden>▲</div>
-              <UpgradeRow
-                flexible
-                label={
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.ticketsPerSecond}</span>
-                    <div className="flex items-center gap-1.5 text-sm font-medium">
-                      <span className="text-zinc-400">{formatNumber(Decimal.fromNumber(ticketsPerSec))}</span>
-                      <span className="text-amber-400/80">→</span>
-                      <span className="text-white">{formatNumber(Decimal.fromNumber(nextTicketsRate))}</span>
-                      <span className="text-amber-500/60 text-[10px]">▲/s</span>
-                    </div>
-                  </div>
-                }
-                sublabel={`${t.upgradesPage.rank} ${upgradeTicketRateRank}`}
-                cost={`◆ ${formatNumber(costTicketRate)}`}
-                canBuy={canBuyTicketRate}
-                onBuy={() => dispatch({ type: "BUY_TICKET_RATE_UPGRADE" })}
-                buttonLabel={`◆ ${formatNumber(costTicketRate)}`}
-              />
-            </div>
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-sm font-bold text-amber-400" aria-hidden>×2</div>
               <UpgradeRow

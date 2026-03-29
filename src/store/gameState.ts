@@ -32,8 +32,6 @@ export interface GameState {
   ticketAccumulator: number;
   /** Moeda de marcos (melhorias) */
   milestoneCurrency: Decimal;
-  /** Ranque da melhoria "tickets por segundo": base 1/s, cada ranque +1/s (infinitos). */
-  upgradeTicketRateRank: number;
   /** Quantas vezes trocou recurso base por +1 ▲/s (marcos 500, 5k, 5M, 5B, …). */
   ticketTradeMilestoneCount: number;
   /** Ranque da melhoria "dobrar produção de ▲/s": multiplica a produção base por 2^rank (infinitos ranques). */
@@ -97,7 +95,6 @@ export function getInitialState(): GameState {
     ticketCurrency: Decimal.dOne,
     ticketAccumulator: 0,
     milestoneCurrency: ZERO,
-    upgradeTicketRateRank: 0,
     ticketTradeMilestoneCount: 0,
     upgradeTicketMultiplierRank: 0,
     upgradeGeneratorCostHalfRank: 0,

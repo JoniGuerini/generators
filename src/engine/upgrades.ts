@@ -47,32 +47,21 @@ export function getTicketTradeThreshold(index: number): Decimal {
   return Decimal.fromNumber(5).mul(Decimal.pow(Decimal.fromNumber(10), exp));
 }
 
-/** Produção base de ▲/s = 1 + ranque ◆ + trocas de recurso base. */
+/** Produção base de ▲/s = 1 + trocas de recurso base. */
 function getTicketProductionBase(
-  upgradeTicketRateRank: number,
   ticketTradeMilestoneCount: number
 ): number {
-  return (
-    1 +
-    Math.max(0, upgradeTicketRateRank) +
-    Math.max(0, ticketTradeMilestoneCount)
-  );
+  return 1 + Math.max(0, ticketTradeMilestoneCount);
 }
 
 /** Tickets por segundo = produção base × 2^multiplierRank (a melhoria "dobrar" multiplica a base). */
 export function getTicketsPerSecond(
-  upgradeTicketRateRank: number,
   ticketTradeMilestoneCount: number = 0,
   upgradeTicketMultiplierRank: number = 0
 ): number {
-  const base = getTicketProductionBase(upgradeTicketRateRank, ticketTradeMilestoneCount);
+  const base = getTicketProductionBase(ticketTradeMilestoneCount);
   const mult = 2 ** Math.max(0, upgradeTicketMultiplierRank);
   return base * mult;
-}
-
-/** Custo em ◆ para o próximo ranque da melhoria "tickets por segundo": 1, 2, 4, 8… (dobra por ranque). */
-export function getUpgradeCostTicketRate(currentRank: number): Decimal {
-  return Decimal.pow(Decimal.fromNumber(2), Math.max(0, currentRank));
 }
 
 /** Custo em ◆ para "dobrar produção de ▲/s": 1, 4, 16, 64… (quadruplica por ranque). */

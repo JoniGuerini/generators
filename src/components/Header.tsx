@@ -15,7 +15,6 @@ export function Header() {
     prestigePoints: state.prestigePoints,
     showFPS: state.options?.showFPS === true,
     ticketsPerSec: getTicketsPerSecond(
-      state.upgradeTicketRateRank,
       state.ticketTradeMilestoneCount,
       state.upgradeTicketMultiplierRank,
     ),

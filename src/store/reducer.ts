@@ -33,6 +33,7 @@ import {
 
 export type GameAction =
   | { type: "TICK"; deltaTimeMs: number; currentTimestamp: number }
+  | { type: "MANUAL_CYCLE"; id: GeneratorId }
   | { type: "BUY_GENERATOR"; id: GeneratorId; amount: number }
   | { type: "CLAIM_MILESTONES"; id: GeneratorId }
   | { type: "CLAIM_ALL_MILESTONES" }
@@ -224,6 +225,31 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         lineStats,
         generators: generatorsWithGains,
         lastUpdateTimestamp: now,
+      };
+    }
+
+    case "MANUAL_CYCLE": {
+      const def = GENERATOR_DEFS[action.id];
+      const gen = state.generators.find((g) => g.id === action.id);
+      if (!gen || gen.quantity.gt(Decimal.dZero)) return state;
+      const prodPerCycle = getEffectiveProductionPerCycle(def.productionPerCycle, gen.upgradeProductionRank);
+      if (def.produces === "base") {
+        const ln = parseGeneratorId(action.id).line;
+        const prevLS = state.lineStats[ln] ?? { baseResourceProduced: Decimal.dZero, milestoneCurrencyEarned: Decimal.dZero };
+        return {
+          ...state,
+          baseResource: state.baseResource.add(prodPerCycle),
+          lineStats: { ...state.lineStats, [ln]: { ...prevLS, baseResourceProduced: prevLS.baseResourceProduced.add(prodPerCycle) } },
+        };
+      }
+      const targetId = def.produces;
+      return {
+        ...state,
+        generators: state.generators.map((g) =>
+          g.id === targetId
+            ? { ...g, quantity: g.quantity.add(prodPerCycle), currentMilestoneTargetIndex: advanceMilestoneTargetIndex(g.quantity.add(prodPerCycle), g.currentMilestoneTargetIndex) }
+            : g
+        ),
       };
     }
 

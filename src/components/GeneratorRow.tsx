@@ -263,13 +263,15 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   if (isLocked) {
     return (
       <div className="flex h-[40px] min-w-0 flex-nowrap items-center gap-2">
-        <div
-          className="flex h-[40px] w-[120px] shrink-0 items-center justify-center rounded-md border-2 border-dashed border-zinc-500 bg-zinc-700/80 text-sm font-bold text-zinc-400"
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "MANUAL_CYCLE", id })}
+          className={`btn-3d ${colorClasses.btn3d} flex h-[40px] w-[120px] shrink-0 cursor-pointer items-center justify-center rounded-md ${colorClasses.bg} text-sm font-bold text-white active:translate-y-[2px]`}
           aria-label={def.name}
-          title={t.generator.lockedTitle}
+          title={t.generator.clickToProduce}
         >
-          {parseGeneratorId(id).gen}
-        </div>
+          {generatorNumber}
+        </button>
         <div className="flex h-[40px] min-w-0 flex-1 items-center justify-center rounded-md border-2 border-dashed border-zinc-600 bg-zinc-800/60">
           <span className="text-center text-sm font-medium text-zinc-500">
             {t.generator.buyToUnlock}

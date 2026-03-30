@@ -49,6 +49,7 @@ export const en: Translations = {
   },
   generator: {
     lockedTitle: "Locked generator — buy to unlock",
+    clickToProduce: "Click to produce manually",
     buyToUnlock: "Buy to unlock",
     resource: "Resource",
     tickets: "Tickets",

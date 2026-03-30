@@ -47,6 +47,7 @@ export const ptBR = {
   },
   generator: {
     lockedTitle: "Gerador bloqueado — compre para desbloquear",
+    clickToProduce: "Clique para produzir manualmente",
     buyToUnlock: "Compre para desbloquear",
     resource: "Recurso",
     tickets: "Tickets",

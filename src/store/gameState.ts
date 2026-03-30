@@ -82,7 +82,7 @@ export function getVisibleGeneratorIds(state: GameState, line?: number): Generat
 
 export function getInitialState(): GameState {
   return {
-    baseResource: Decimal.fromNumber(10),
+    baseResource: Decimal.dZero,
     ticketCurrency: Decimal.dOne,
     ticketAccumulator: 0,
     milestoneCurrency: ZERO,

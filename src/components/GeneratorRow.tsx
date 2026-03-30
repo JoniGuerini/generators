@@ -75,8 +75,9 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     const effectiveCostPrev = getEffectiveGeneratorCost(def.costPreviousGenerator, upgradeGeneratorCostHalfRank);
 
     // Calc max affordable
+    const ticketCostPerUnit = parseGeneratorId(id).line;
     const maxByBase = baseResource.div(effectiveCost).floor();
-    const maxByTickets = ticketCurrency.floor();
+    const maxByTickets = ticketCurrency.div(ticketCostPerUnit).floor();
     let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
     if (effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base" && prevGenQuantity) {
       maxByPrev = prevGenQuantity.div(effectiveCostPrev).floor();
@@ -87,7 +88,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     if (maxByPrev.lt(maxAffordable)) maxAffordable = maxByPrev;
 
     const hasEnoughPrev = effectiveCostPrev.lte(Decimal.dZero) || def.produces === "base" || (prevGenQuantity ? Decimal.gte(prevGenQuantity, effectiveCostPrev) : false);
-    const canBuy = Decimal.gte(baseResource, effectiveCost) && Decimal.gte(ticketCurrency, Decimal.dOne) && hasEnoughPrev;
+    const canBuy = Decimal.gte(baseResource, effectiveCost) && Decimal.gte(ticketCurrency, Decimal.fromNumber(ticketCostPerUnit)) && hasEnoughPrev;
 
     return {
       gen: generator,
@@ -235,9 +236,10 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const displayCost = amountForDisplay >= 1 ? costForDisplay : effectiveCost;
   const displayPrevCost = prevCostForDisplay;
   const hasPrevCost = effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base";
-  const ticketsRequired = amountForDisplay >= 1 ? amountForDisplay : 1;
+  const ticketCostPerUnit = parseGeneratorId(id).line;
+  const ticketsRequired = (amountForDisplay >= 1 ? amountForDisplay : 1) * ticketCostPerUnit;
   const lacksBase = baseResource.lt(displayCost);
-  const lacksTickets = ticketCurrency.lt(Decimal.fromNumber(ticketsRequired));
+  const lacksTickets = ticketCurrency.lt(Decimal.fromNumber(ticketCostPerUnit));
   const lacksPrev = hasPrevCost && (
     prevGenQuantity
       ? prevGenQuantity.lt(displayPrevCost)

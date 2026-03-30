@@ -87,8 +87,9 @@ export function computeGeneratorPurchase(
       ? state.generators.find((g) => g.id === def.produces)?.quantity
       : undefined;
 
+  const ticketCostPerUnit = parseGeneratorId(id).line;
   const maxByBase = baseResource.div(effectiveCost).floor();
-  const maxByTickets = ticketCurrency.floor();
+  const maxByTickets = ticketCurrency.div(ticketCostPerUnit).floor();
   let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
   if (
     effectiveCostPrev.gt(Decimal.dZero) &&
@@ -109,7 +110,7 @@ export function computeGeneratorPurchase(
       : false);
   const canBuy =
     Decimal.gte(baseResource, effectiveCost) &&
-    Decimal.gte(ticketCurrency, Decimal.dOne) &&
+    Decimal.gte(ticketCurrency, Decimal.fromNumber(ticketCostPerUnit)) &&
     hasEnoughPrev;
 
   const quantity = gen.quantity;

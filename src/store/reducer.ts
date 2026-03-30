@@ -229,8 +229,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         def.costPreviousGenerator,
         state.upgradeGeneratorCostHalfRank
       );
+      const ticketCostPerUnit = parseGeneratorId(action.id).line;
       const maxByBase = state.baseResource.div(effectiveCost).floor();
-      const maxByTickets = state.ticketCurrency.floor();
+      const maxByTickets = state.ticketCurrency.div(ticketCostPerUnit).floor();
       let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
       if (effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base") {
         const prevGen = state.generators.find((g) => g.id === def.produces);
@@ -289,7 +290,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         baseResource: state.baseResource.sub(totalCost),
-        ticketCurrency: state.ticketCurrency.sub(Decimal.fromNumber(amountNum)),
+        ticketCurrency: state.ticketCurrency.sub(Decimal.fromNumber(amountNum * ticketCostPerUnit)),
         generators: nextGenerators,
       };
     }

@@ -107,9 +107,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const deltaSec = action.deltaTimeMs / 1000;
       const now = action.currentTimestamp;
       let baseResource = state.baseResource;
-      
-      // Use an array for deltas to avoid object overhead if possible, 
-      // but keeping it simple for now with a local map.
+      const lineBaseDeltas = new Map<number, Decimal>();
       const deltasMap = new Map<GeneratorId, Decimal>();
 
       let generatorsChanged = false;
@@ -151,6 +149,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
           if (def.produces === "base") {
             baseResource = baseResource.add(produced);
+            const ln = parseGeneratorId(gen.id).line;
+            lineBaseDeltas.set(ln, (lineBaseDeltas.get(ln) ?? Decimal.dZero).add(produced));
           } else {
             const currentDelta = deltasMap.get(def.produces) || Decimal.dZero;
             deltasMap.set(def.produces, currentDelta.add(produced));
@@ -207,11 +207,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         // But we return updatedGenerators which has new cycleStartTimes
       }
 
+      let lineStats = state.lineStats;
+      if (lineBaseDeltas.size > 0) {
+        lineStats = { ...lineStats };
+        for (const [ln, delta] of lineBaseDeltas) {
+          const prev = lineStats[ln] ?? { baseResourceProduced: Decimal.dZero, milestoneCurrencyEarned: Decimal.dZero };
+          lineStats[ln] = { ...prev, baseResourceProduced: prev.baseResourceProduced.add(delta) };
+        }
+      }
+
       return {
         ...state,
         baseResource,
         ticketCurrency,
         ticketAccumulator,
+        lineStats,
         generators: generatorsWithGains,
         lastUpdateTimestamp: now,
       };
@@ -431,13 +441,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const currentCount = getCurrentMilestoneCount(gen.quantity);
       const claimed = gen.claimedMilestoneIndex;
       if (currentCount <= claimed) return state;
-      const generatorNumber = parseGeneratorId(gen.id).gen;
+      const { gen: generatorNumber, line: claimLine } = parseGeneratorId(gen.id);
       const baseCoins = getCoinsFromClaiming(generatorNumber, claimed, currentCount);
       const mult = getMilestoneRewardMultiplier(state.upgradeMilestoneDoublerRank);
       const coins = mult > 1 ? baseCoins.mul(mult) : baseCoins;
+      const prevLS = state.lineStats[claimLine] ?? { baseResourceProduced: Decimal.dZero, milestoneCurrencyEarned: Decimal.dZero };
       return {
         ...state,
         milestoneCurrency: state.milestoneCurrency.add(coins),
+        lineStats: { ...state.lineStats, [claimLine]: { ...prevLS, milestoneCurrencyEarned: prevLS.milestoneCurrencyEarned.add(coins) } },
         generators: state.generators.map((g, i) =>
           i === genIndex ? { ...g, claimedMilestoneIndex: currentCount } : g
         ),
@@ -447,20 +459,28 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "CLAIM_ALL_MILESTONES": {
       const milestoneMultiplier = getMilestoneRewardMultiplier(state.upgradeMilestoneDoublerRank);
       let totalCoins = Decimal.dZero;
+      const lineCoins = new Map<number, Decimal>();
       const updatedGens = state.generators.map((gen) => {
         const currentCount = getCurrentMilestoneCount(gen.quantity);
         if (currentCount <= gen.claimedMilestoneIndex) return gen;
-        const generatorNumber = parseGeneratorId(gen.id).gen;
-        totalCoins = totalCoins.add(
-          getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentCount)
-        );
+        const { gen: generatorNumber, line: ln } = parseGeneratorId(gen.id);
+        const coins = getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentCount);
+        totalCoins = totalCoins.add(coins);
+        lineCoins.set(ln, (lineCoins.get(ln) ?? Decimal.dZero).add(coins));
         return { ...gen, claimedMilestoneIndex: currentCount };
       });
       if (totalCoins.lte(Decimal.dZero)) return state;
       const finalCoins = milestoneMultiplier > 1 ? totalCoins.mul(milestoneMultiplier) : totalCoins;
+      const updatedLineStats = { ...state.lineStats };
+      for (const [ln, raw] of lineCoins) {
+        const earned = milestoneMultiplier > 1 ? raw.mul(milestoneMultiplier) : raw;
+        const prev = updatedLineStats[ln] ?? { baseResourceProduced: Decimal.dZero, milestoneCurrencyEarned: Decimal.dZero };
+        updatedLineStats[ln] = { ...prev, milestoneCurrencyEarned: prev.milestoneCurrencyEarned.add(earned) };
+      }
       return {
         ...state,
         milestoneCurrency: state.milestoneCurrency.add(finalCoins),
+        lineStats: updatedLineStats,
         generators: updatedGens,
       };
     }

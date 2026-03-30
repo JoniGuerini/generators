@@ -24,6 +24,7 @@ interface SavedState {
   rank?: number;
   cards?: Record<string, number>;
   activeLine?: number;
+  lineStats?: Record<string, { baseResourceProduced: string; milestoneCurrencyEarned: string }>;
   generators: {
     id: string;
     quantity: string;
@@ -79,6 +80,12 @@ function serialize(state: GameState): string {
     rank: state.rank,
     cards: state.cards,
     activeLine: state.activeLine,
+    lineStats: Object.fromEntries(
+      Object.entries(state.lineStats).map(([k, v]) => [k, {
+        baseResourceProduced: v.baseResourceProduced.toString(),
+        milestoneCurrencyEarned: v.milestoneCurrencyEarned.toString(),
+      }])
+    ),
     generators: state.generators.map((g) => ({
       id: g.id,
       quantity: g.quantity.toString(),
@@ -145,6 +152,16 @@ function deserialize(raw: string): GameState | null {
     const rawCards = (saved.cards && typeof saved.cards === "object") ? saved.cards : {};
     const cards = needsMigration ? migrateCardKeys(rawCards) : rawCards;
 
+    const lineStats: Record<number, { baseResourceProduced: Decimal; milestoneCurrencyEarned: Decimal }> = {};
+    if (saved.lineStats && typeof saved.lineStats === "object") {
+      for (const [k, v] of Object.entries(saved.lineStats)) {
+        lineStats[Number(k)] = {
+          baseResourceProduced: Decimal.fromString(v.baseResourceProduced ?? "0"),
+          milestoneCurrencyEarned: Decimal.fromString(v.milestoneCurrencyEarned ?? "0"),
+        };
+      }
+    }
+
     return {
       baseResource: Decimal.fromString(saved.baseResource ?? "0"),
       ticketCurrency: Decimal.fromString(saved.ticketCurrency ?? "0"),
@@ -158,6 +175,7 @@ function deserialize(raw: string): GameState | null {
       rank: Number(saved.rank) || 1,
       cards,
       activeLine: Number(saved.activeLine) || 1,
+      lineStats,
       generators,
       options: {
         showFPS: shared.showFPS,

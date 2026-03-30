@@ -1,6 +1,7 @@
 import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { getVisibleGeneratorIds } from "@/store/gameState";
+import type { LineStats } from "@/store/gameState";
 import { getCurrentMilestoneCount, getCoinsFromClaiming } from "@/utils/milestones";
 import { getMilestoneRewardMultiplier } from "@/engine/upgrades";
 import { formatNumber } from "@/utils/format";
@@ -64,10 +65,23 @@ export function GeneratorList() {
 
   const hasPending = totalPending.gt(Decimal.dZero);
 
+  const stats: LineStats = useGameSelector(
+    (s) => s.lineStats[activeLine] ?? { baseResourceProduced: Decimal.dZero, milestoneCurrencyEarned: Decimal.dZero },
+    (a, b) => a.baseResourceProduced.equals(b.baseResourceProduced) && a.milestoneCurrencyEarned.equals(b.milestoneCurrencyEarned)
+  );
+
   return (
     <div className="flex min-w-0 flex-col gap-3 pt-2.5">
       <MissionCard />
       <LineSelector />
+      <div className="flex items-center gap-3 rounded-lg bg-zinc-900/70 px-3 py-1.5 text-xs tabular-nums">
+        <span className="text-zinc-500">
+          <span className="text-cyan-400">●</span> {formatNumber(stats.baseResourceProduced)}
+        </span>
+        <span className="text-zinc-500">
+          <span className="text-violet-400">◆</span> {formatNumber(stats.milestoneCurrencyEarned)}
+        </span>
+      </div>
       <ul className="flex min-w-0 flex-col gap-3">
         {visibleIds.map((id) => (
           <li key={id}>

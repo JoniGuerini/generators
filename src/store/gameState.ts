@@ -15,6 +15,11 @@ export interface GeneratorState {
   upgradeCritMultiplierRank: number;
 }
 
+export interface LineStats {
+  baseResourceProduced: Decimal;
+  milestoneCurrencyEarned: Decimal;
+}
+
 export interface GameState {
   baseResource: Decimal;
   ticketCurrency: Decimal;
@@ -29,6 +34,7 @@ export interface GameState {
   rank: number;
   cards: Record<string, number>;
   activeLine: number;
+  lineStats: Record<number, LineStats>;
   lastUpdateTimestamp: number;
   options: {
     showFPS: boolean;
@@ -89,6 +95,7 @@ export function getInitialState(): GameState {
     rank: 1,
     cards: {},
     activeLine: 1,
+    lineStats: {},
     lastUpdateTimestamp: Date.now(),
     options: { showFPS: false, sfxEnabled: true, sfxVolume: 50, sfxStyle: "soft", locale: "pt-BR" },
   };

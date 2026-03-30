@@ -559,7 +559,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "RESET_GAME": {
-      return getInitialState();
+      return { ...getInitialState(), options: state.options };
     }
 
     case "REPLACE_STATE": {

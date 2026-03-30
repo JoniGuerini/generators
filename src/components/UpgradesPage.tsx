@@ -302,10 +302,10 @@ export function UpgradesPage() {
                 key={line}
                 type="button"
                 onClick={() => setUpgradeLine(line)}
-                className={`flex h-7 flex-1 items-center justify-center rounded text-xs font-bold text-white transition-opacity ${
+                className={`btn-3d flex h-7 flex-1 items-center justify-center rounded text-xs font-bold text-white ${
                   isActive
                     ? `${classes.btn3d} ${classes.bg}`
-                    : "bg-zinc-700 text-zinc-500 opacity-60 hover:opacity-100"
+                    : "btn-3d--zinc bg-zinc-700 text-zinc-500 opacity-60 hover:opacity-100"
                 }`}
               >
                 {line}

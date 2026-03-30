@@ -9,7 +9,8 @@ import { useT } from "@/locale";
 export function Header() {
   const fps = useFPS();
   const t = useT();
-  const { ticketCurrency, milestoneCurrency, showFPS, ticketsPerSec } = useGameSelector((state) => ({
+  const { totalResources, ticketCurrency, milestoneCurrency, showFPS, ticketsPerSec } = useGameSelector((state) => ({
+    totalResources: Object.values(state.lineResources).reduce((sum, v) => sum.add(v), Decimal.dZero),
     ticketCurrency: state.ticketCurrency,
     milestoneCurrency: state.milestoneCurrency,
     showFPS: state.options?.showFPS === true,
@@ -22,6 +23,19 @@ export function Header() {
   return (
     <header className="sticky top-0 z-20 relative flex items-center justify-center bg-[#0D0D0D] px-2 py-3 shadow min-h-[64px]">
       <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4">
+        <div
+          className="flex w-[8rem] sm:w-[10rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
+          title={t.header.resourceTooltip}
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-cyan-400 text-xs" aria-hidden>●</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.header.resource}</span>
+          </div>
+          <span className="truncate text-lg font-bold tabular-nums text-white">
+            {formatNumber(totalResources)}
+          </span>
+        </div>
+
         <div
           className="flex w-[8rem] sm:w-[10rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
           title={`${t.header.ticketsTooltip} — ${formatNumber(Decimal.fromNumber(ticketsPerSec))}/s`}

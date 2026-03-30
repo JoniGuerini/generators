@@ -97,27 +97,22 @@ export function GeneratorList() {
           </li>
         ))}
       </ul>
-      <div className="flex min-w-0 flex-nowrap items-center gap-2">
-        <div className="w-[40px] shrink-0" />
-        <div className="w-[72px] shrink-0" />
-        <button
-          type="button"
-          onClick={() => dispatch({ type: "CLAIM_ALL_MILESTONES" })}
-          disabled={!hasPending}
-          className={`btn-3d flex h-[40px] min-w-0 flex-1 items-center justify-center rounded-md text-sm font-medium ${
-            hasPending
-              ? "btn-3d--purple bg-purple-600 text-white hover:bg-purple-500"
-              : "btn-3d--zinc bg-zinc-700 text-zinc-500 cursor-default"
-          }`}
-        >
-          <span className="text-sm font-medium">
-            {hasPending
-              ? t.generatorList.claimAll(formatNumber(totalPending))
-              : t.generatorList.noPending}
-          </span>
-        </button>
-        <div className="w-[160px] shrink-0" />
-      </div>
+      <button
+        type="button"
+        onClick={() => dispatch({ type: "CLAIM_ALL_MILESTONES" })}
+        disabled={!hasPending}
+        className={`btn-3d flex h-[40px] w-full items-center justify-center rounded-md text-sm font-medium ${
+          hasPending
+            ? "btn-3d--purple bg-purple-600 text-white hover:bg-purple-500"
+            : "btn-3d--zinc bg-zinc-700 text-zinc-500 cursor-default"
+        }`}
+      >
+        <span className="text-sm font-medium">
+          {hasPending
+            ? t.generatorList.claimAll(formatNumber(totalPending))
+            : t.generatorList.noPending}
+        </span>
+      </button>
     </div>
   );
 }

@@ -115,6 +115,7 @@ export const en: Translations = {
     needed: "needed",
   },
   upgradesPage: {
+    general: "General",
     generators: "Generators",
     tickets: "Tickets",
     maxed: "Max.",

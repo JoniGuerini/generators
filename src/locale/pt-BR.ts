@@ -113,6 +113,7 @@ export const ptBR = {
     needed: "necessárias",
   },
   upgradesPage: {
+    general: "Geral",
     generators: "Geradores",
     tickets: "Tickets",
     maxed: "Máx.",

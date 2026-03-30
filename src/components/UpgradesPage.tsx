@@ -466,7 +466,7 @@ export function UpgradesPage() {
 
               return (
                 <li key={id} className="flex items-center gap-2">
-                  <div className={`${colorClasses.btn3d} flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${colorClasses.bg}/90 text-sm font-bold text-white`} title={def.name}>
+                  <div className={`${colorClasses.btn3d} flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${colorClasses.bg} text-sm font-bold text-white`} title={def.name}>
                     {generatorNumber}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-wrap gap-2">

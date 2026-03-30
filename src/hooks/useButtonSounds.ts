@@ -25,13 +25,15 @@ export function useButtonSounds(options: SoundOptions) {
   }, [options.sfxEnabled, options.sfxVolume, options.sfxStyle, options.locale]);
 
   useEffect(() => {
+    function isButtonEnabled(target: HTMLElement): boolean {
+      const btn = target.closest("button");
+      return btn != null && !btn.disabled;
+    }
     function onPointerDown(e: PointerEvent) {
-      const target = e.target as HTMLElement;
-      if (target.closest("button")) playClickDown();
+      if (isButtonEnabled(e.target as HTMLElement)) playClickDown();
     }
     function onPointerUp(e: PointerEvent) {
-      const target = e.target as HTMLElement;
-      if (target.closest("button")) playClickUp();
+      if (isButtonEnabled(e.target as HTMLElement)) playClickUp();
     }
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("pointerup", onPointerUp);

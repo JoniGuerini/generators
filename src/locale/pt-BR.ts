@@ -6,13 +6,12 @@ export const ptBR = {
     ticketsTooltip: "Moeda de Compra",
     upgrades: "Melhorias",
     upgradesTooltip: "Moeda de Marcos",
-    prestige: "Prestígio",
-    prestigeTooltip: "Pontos de Prestígio",
     fps: "FPS",
     fpsTooltip: "Frames por segundo",
   },
   footer: {
     upgrades: "Melhorias",
+    missions: "Missões",
     back: "Voltar",
   },
   settings: {
@@ -76,8 +75,42 @@ export const ptBR = {
     claimAndContinue: "Resgatar e continuar",
     continue: "Continuar",
   },
-  prestige: {
-    ready: "Pronto",
+  missions: {
+    title: "Missão",
+    reward: "Recompensa",
+    claim: "Resgatar",
+    resource: "Recurso",
+    rank: "Ranque",
+    rankMax: "Máx",
+    rankUp: "Subir de Ranque!",
+    completed: "Missão Completa!",
+    cardsReward: "Cartas de Melhoria",
+    pageTitle: "Todas as Missões",
+    allCompleted: "Todas as missões deste ranque foram completadas!",
+    generatorCount: (count: string) =>
+      `Tenha ${count}`,
+    milestoneCurrencyTotal: (count: string) =>
+      `Colete ${count} ◆ de Melhorias`,
+    milestoneCurrencyCollect: (count: string) => `Colete ${count}`,
+    milestoneCurrencySuffix: "de Melhorias",
+    baseResourceTotal: (amount: string) =>
+      `Acumule ${amount} ● Recurso`,
+    baseResourceAccumulate: (amount: string) => `Acumule ${amount}`,
+    baseResourceSuffix: "Recurso",
+  },
+  cards: {
+    cycleSpeed: "Tempo de Ciclo",
+    production: "Produção",
+    critChance: "Chance de Crítico",
+    critMultiplier: "Eficiência de Crítico",
+    ticketMultiplier: "Multiplicar Tickets",
+    generatorCostHalf: "Custo ÷2",
+    milestoneDoubler: "Dobrar ◆",
+    generator: "Gerador",
+    common: "Comum",
+    uncommon: "Incomum",
+    rare: "Rara",
+    needed: "necessárias",
   },
   upgradesPage: {
     generators: "Geradores",
@@ -99,6 +132,11 @@ export const ptBR = {
   },
   docs: {
     title: "Documentação do Jogo",
+    tabBasics: "Básico",
+    tabCurrencies: "Moedas",
+    tabGenerators: "Geradores",
+    tabUpgrades: "Melhorias",
+    tabCards: "Cartas",
     basicsTitle: "O Básico",
     basicsText:
       'O principal objetivo do jogo é acumular <strong>Recurso Base (●)</strong> através de Geradores. O progresso é infinito, baseado na compra de geradores cada vez mais poderosos, e é medido pela capacidade de alcançar valores inimagináveis (utilizando <code class="rounded bg-zinc-700 px-1 text-sm text-pink-400">break_eternity.js</code> para lidar com números absurdamente grandes).',
@@ -162,6 +200,32 @@ export const ptBR = {
     offlineTitle: "Simulação Offline",
     offlineText:
       "O jogo calcula o seu progresso enquanto a aba estava fechada. Como geradores superiores criam geradores inferiores (que por sua vez geram recurso base), a matemática offline de múltiplas camadas de geração utiliza as mesmas fórmulas em loop limitando ticks por intervalo para criar uma previsão hiper-realista do que você teria gerado nas horas que ficou fora, incluindo o bônus dos geradores recém-nascidos atuando no espaço temporal.",
+    cardsIntro:
+      "Para comprar melhorias, além de gastar <strong>◆ Moedas de Marco</strong>, você precisa de <strong>Cartas</strong> específicas daquela melhoria. Cartas são obtidas como recompensa ao completar missões.",
+    cardsHowTitle: "Como Obter Cartas",
+    cardsHowDesc:
+      "Cada missão completada concede <strong>2 a 4 cartas aleatórias</strong>. As cartas sorteadas são apenas de <strong>geradores que você já desbloqueou</strong> (comprou pelo menos 1 unidade). Cartas globais (Custo ÷2, Dobrar ◆, Multiplicar Tickets) podem aparecer independentemente.",
+    cardsNeededTitle: "Cartas Necessárias por Ranque",
+    cardsNeededDesc:
+      "A quantidade de cartas necessárias para subir de ranque em uma melhoria cresce progressivamente:",
+    cardsTableRank: "Ranque",
+    cardsTableNeeded: "Cartas Necessárias",
+    cardsRarityTitle: "Raridades",
+    cardsRarityDesc:
+      "Cada carta possui uma raridade que determina a probabilidade de drop:",
+    cardsTableRarity: "Raridade",
+    cardsTableChance: "Chance",
+    cardsTableTypes: "Tipos",
+    cardsCommon: "Comum",
+    cardsCommonTypes: "Tempo de Ciclo, Produção",
+    cardsUncommon: "Incomum",
+    cardsUncommonTypes: "Chance de Crítico",
+    cardsRare: "Rara",
+    cardsRareTypes: "Eficiência de Crítico, Custo ÷2, Dobrar ◆, Multiplicar Tickets",
+    cardsRulesTitle: "Regras Importantes",
+    cardsRule1: "Cada carta é específica: uma carta de Tempo de Ciclo do Gerador 1 só funciona para essa melhoria exata.",
+    cardsRule2: "Missões só concedem cartas de geradores que o jogador já desbloqueou.",
+    cardsRule3: "As cartas são consumidas ao comprar a melhoria.",
   },
 };
 

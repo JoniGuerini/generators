@@ -40,11 +40,12 @@ export interface GameState {
   upgradeGeneratorCostHalfRank: number;
   /** Ranque da melhoria "dobrar pontos de melhoria por marco" (0 = sem; cada ranque ×2 nos ◆ ganhos). */
   upgradeMilestoneDoublerRank: number;
-  /** Pontos de prestígio acumulados (ganhos ao atingir 1 Dc de recurso base). */
-  prestigePoints: Decimal;
-  /** Quantos marcos de 1 Dc já foram contabilizados (para não dar pontos duplicados). */
-  prestigeThresholdsClaimed: Decimal;
   generators: GeneratorState[];
+  claimedMissions: string[];
+  /** Ranque atual do jogador (1-based). Subir de nível é manual. */
+  rank: number;
+  /** Inventário de cartas: cardKey → quantidade. */
+  cards: Record<string, number>;
   lastUpdateTimestamp: number;
   options: {
     showFPS: boolean;
@@ -99,9 +100,10 @@ export function getInitialState(): GameState {
     upgradeTicketMultiplierRank: 0,
     upgradeGeneratorCostHalfRank: 0,
     upgradeMilestoneDoublerRank: 0,
-    prestigePoints: ZERO,
-    prestigeThresholdsClaimed: ZERO,
     generators: GENERATOR_IDS.map((id) => initialGeneratorState(id)),
+    claimedMissions: [],
+    rank: 1,
+    cards: {},
     lastUpdateTimestamp: Date.now(),
     options: { showFPS: false, sfxEnabled: true, sfxVolume: 50, sfxStyle: "soft", locale: "pt-BR" },
   };

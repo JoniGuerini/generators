@@ -8,6 +8,9 @@ import {
   getCoinsFromClaiming,
   advanceMilestoneTargetIndex,
 } from "@/utils/milestones";
+import { MISSIONS, RANK_THRESHOLDS } from "@/engine/missions";
+import type { MissionReward } from "@/engine/missions";
+import { getCardKey, getCardsNeeded } from "@/engine/cards";
 import {
   getEffectiveCycleTimeSeconds,
   getEffectiveProductionPerCycle,
@@ -43,9 +46,59 @@ export type GameAction =
   | { type: "SET_SFX_VOLUME"; volume: number }
   | { type: "SET_SFX_STYLE"; style: string }
   | { type: "SET_LOCALE"; locale: string }
+  | { type: "CLAIM_MISSION"; missionId: string; cards: Record<string, number> }
+  | { type: "RANK_UP" }
   | { type: "RESET_OPTIONS" }
   | { type: "RESET_GAME" }
   | { type: "REPLACE_STATE"; state: GameState };
+
+function addCards(cards: Record<string, number>, toAdd: Record<string, number>): Record<string, number> {
+  const next = { ...cards };
+  for (const [key, count] of Object.entries(toAdd)) {
+    next[key] = (next[key] || 0) + count;
+  }
+  return next;
+}
+
+function spendCards(cards: Record<string, number>, key: string, amount: number): Record<string, number> {
+  const next = { ...cards };
+  next[key] = (next[key] || 0) - amount;
+  if (next[key] <= 0) delete next[key];
+  return next;
+}
+
+function applyMissionReward(state: GameState, reward: MissionReward): GameState {
+  switch (reward.type) {
+    case "baseResource":
+      return { ...state, baseResource: state.baseResource.add(Decimal.fromNumber(reward.amount)) };
+    case "tickets":
+      return { ...state, ticketCurrency: state.ticketCurrency.add(Decimal.fromNumber(reward.amount)) };
+    case "milestoneCurrency":
+      return { ...state, milestoneCurrency: state.milestoneCurrency.add(Decimal.fromNumber(reward.amount)) };
+    case "generators": {
+      const genIndex = state.generators.findIndex((g) => g.id === reward.generatorId);
+      if (genIndex < 0) return state;
+      return {
+        ...state,
+        generators: state.generators.map((g, i) =>
+          i === genIndex
+            ? {
+                ...g,
+                quantity: g.quantity.add(Decimal.fromNumber(reward.amount)),
+                everOwned: true,
+                currentMilestoneTargetIndex: advanceMilestoneTargetIndex(
+                  g.quantity.add(Decimal.fromNumber(reward.amount)),
+                  g.currentMilestoneTargetIndex
+                ),
+              }
+            : g
+        ),
+      };
+    }
+    default:
+      return state;
+  }
+}
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -153,23 +206,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         // But we return updatedGenerators which has new cycleStartTimes
       }
 
-      const PRESTIGE_THRESHOLD = Decimal.pow(10, 33);
-      let prestigePoints = state.prestigePoints;
-      let prestigeThresholdsClaimed = state.prestigeThresholdsClaimed;
-      const currentDecillions = baseResource.div(PRESTIGE_THRESHOLD).floor();
-      if (currentDecillions.gt(prestigeThresholdsClaimed)) {
-        const earned = currentDecillions.sub(prestigeThresholdsClaimed);
-        prestigePoints = prestigePoints.add(earned);
-        prestigeThresholdsClaimed = currentDecillions;
-      }
-
       return {
         ...state,
         baseResource,
         ticketCurrency,
         ticketAccumulator,
-        prestigePoints,
-        prestigeThresholdsClaimed,
         generators: generatorsWithGains,
         lastUpdateTimestamp: now,
       };
@@ -264,9 +305,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         if (gen.upgradeCycleSpeedRank >= maxRank) return state;
         const cost = getUpgradeCostCycleSpeed(generatorNumber, gen.upgradeCycleSpeedRank);
         if (state.milestoneCurrency.lt(cost)) return state;
+        const cardKey = getCardKey("cycleSpeed", gen.id);
+        const needed = getCardsNeeded(gen.upgradeCycleSpeedRank);
+        if ((state.cards[cardKey] || 0) < needed) return state;
         return {
           ...state,
           milestoneCurrency: state.milestoneCurrency.sub(cost),
+          cards: spendCards(state.cards, cardKey, needed),
           generators: state.generators.map((g, i) =>
             i === genIndex ? { ...g, upgradeCycleSpeedRank: g.upgradeCycleSpeedRank + 1 } : g
           ),
@@ -276,9 +321,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (action.upgradeType === "production") {
         const cost = getUpgradeCostProduction(generatorNumber, gen.upgradeProductionRank);
         if (state.milestoneCurrency.lt(cost)) return state;
+        const cardKey = getCardKey("production", gen.id);
+        const needed = getCardsNeeded(gen.upgradeProductionRank);
+        if ((state.cards[cardKey] || 0) < needed) return state;
         return {
           ...state,
           milestoneCurrency: state.milestoneCurrency.sub(cost),
+          cards: spendCards(state.cards, cardKey, needed),
           generators: state.generators.map((g, i) =>
             i === genIndex ? { ...g, upgradeProductionRank: g.upgradeProductionRank + 1 } : g
           ),
@@ -289,9 +338,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         if (gen.upgradeCritChanceRank >= MAX_CRIT_CHANCE_RANK) return state;
         const cost = getUpgradeCostCritChance(generatorNumber, gen.upgradeCritChanceRank);
         if (state.milestoneCurrency.lt(cost)) return state;
+        const cardKey = getCardKey("critChance", gen.id);
+        const needed = getCardsNeeded(gen.upgradeCritChanceRank);
+        if ((state.cards[cardKey] || 0) < needed) return state;
         return {
           ...state,
           milestoneCurrency: state.milestoneCurrency.sub(cost),
+          cards: spendCards(state.cards, cardKey, needed),
           generators: state.generators.map((g, i) =>
             i === genIndex ? { ...g, upgradeCritChanceRank: g.upgradeCritChanceRank + 1 } : g
           ),
@@ -301,9 +354,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (action.upgradeType === "critMultiplier") {
         const cost = getUpgradeCostCritMultiplier(generatorNumber, gen.upgradeCritMultiplierRank);
         if (state.milestoneCurrency.lt(cost)) return state;
+        const cardKey = getCardKey("critMultiplier", gen.id);
+        const needed = getCardsNeeded(gen.upgradeCritMultiplierRank);
+        if ((state.cards[cardKey] || 0) < needed) return state;
         return {
           ...state,
           milestoneCurrency: state.milestoneCurrency.sub(cost),
+          cards: spendCards(state.cards, cardKey, needed),
           generators: state.generators.map((g, i) =>
             i === genIndex ? { ...g, upgradeCritMultiplierRank: g.upgradeCritMultiplierRank + 1 } : g
           ),
@@ -316,9 +373,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "BUY_TICKET_MULTIPLIER_UPGRADE": {
       const cost = getUpgradeCostTicketMultiplier(state.upgradeTicketMultiplierRank);
       if (state.milestoneCurrency.lt(cost)) return state;
+      const cardKey = getCardKey("ticketMultiplier");
+      const needed = getCardsNeeded(state.upgradeTicketMultiplierRank);
+      if ((state.cards[cardKey] || 0) < needed) return state;
       return {
         ...state,
         milestoneCurrency: state.milestoneCurrency.sub(cost),
+        cards: spendCards(state.cards, cardKey, needed),
         upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank + 1,
       };
     }
@@ -326,9 +387,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "BUY_GENERATOR_COST_HALF_UPGRADE": {
       const cost = getUpgradeCostGeneratorCostHalf(state.upgradeGeneratorCostHalfRank);
       if (state.milestoneCurrency.lt(cost)) return state;
+      const cardKey = getCardKey("generatorCostHalf");
+      const needed = getCardsNeeded(state.upgradeGeneratorCostHalfRank);
+      if ((state.cards[cardKey] || 0) < needed) return state;
       return {
         ...state,
         milestoneCurrency: state.milestoneCurrency.sub(cost),
+        cards: spendCards(state.cards, cardKey, needed),
         upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank + 1,
       };
     }
@@ -336,9 +401,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "BUY_MILESTONE_DOUBLER_UPGRADE": {
       const cost = getUpgradeCostMilestoneDoubler(state.upgradeMilestoneDoublerRank);
       if (state.milestoneCurrency.lt(cost)) return state;
+      const cardKey = getCardKey("milestoneDoubler");
+      const needed = getCardsNeeded(state.upgradeMilestoneDoublerRank);
+      if ((state.cards[cardKey] || 0) < needed) return state;
       return {
         ...state,
         milestoneCurrency: state.milestoneCurrency.sub(cost),
+        cards: spendCards(state.cards, cardKey, needed),
         upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank + 1,
       };
     }
@@ -427,6 +496,33 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         options: { ...state.options, locale: action.locale },
       };
+    }
+
+    case "CLAIM_MISSION": {
+      if (state.claimedMissions.includes(action.missionId)) return state;
+      const mission = MISSIONS.find((m) => m.id === action.missionId);
+      if (!mission) return state;
+
+      let s = {
+        ...state,
+        claimedMissions: [...state.claimedMissions, mission.id],
+        cards: addCards(state.cards, action.cards),
+      };
+      for (const reward of mission.rewards) {
+        s = applyMissionReward(s, reward);
+      }
+      return s;
+    }
+
+    case "RANK_UP": {
+      const currentRank = state.rank;
+      if (currentRank > RANK_THRESHOLDS.length) return state;
+      const threshold = RANK_THRESHOLDS[currentRank - 1];
+      let accumulated = 0;
+      for (let i = 0; i < currentRank - 1; i++) accumulated += RANK_THRESHOLDS[i];
+      const xp = state.claimedMissions.length - accumulated;
+      if (xp < threshold) return state;
+      return { ...state, rank: currentRank + 1 };
     }
 
     case "RESET_OPTIONS": {

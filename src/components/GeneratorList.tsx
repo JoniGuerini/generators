@@ -6,6 +6,7 @@ import { getMilestoneRewardMultiplier } from "@/engine/upgrades";
 import { formatNumber } from "@/utils/format";
 import { useT } from "@/locale";
 import { GeneratorRow } from "./GeneratorRow";
+import { MissionCard } from "./MissionCard";
 
 export function GeneratorList() {
   const visibleIds = useGameSelector(getVisibleGeneratorIds, (a, b) => a.join() === b.join());
@@ -30,6 +31,7 @@ export function GeneratorList() {
 
   return (
     <div className="flex min-w-0 flex-col gap-3 pt-2.5">
+      <MissionCard />
       <ul className="flex min-w-0 flex-col gap-3">
         {visibleIds.map((id) => (
           <li key={id}>

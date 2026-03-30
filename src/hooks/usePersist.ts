@@ -19,8 +19,9 @@ interface SavedState {
   upgradeTicketMultiplierRank?: number;
   upgradeGeneratorCostHalfRank?: number;
   upgradeMilestoneDoublerRank?: number;
-  prestigePoints?: string;
-  prestigeThresholdsClaimed?: string | number;
+  claimedMissions?: string[];
+  rank?: number;
+  cards?: Record<string, number>;
   generators: {
     id: string;
     quantity: string;
@@ -49,8 +50,9 @@ function serialize(state: GameState): string {
     upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank,
     upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
-    prestigePoints: state.prestigePoints.toString(),
-    prestigeThresholdsClaimed: state.prestigeThresholdsClaimed.toString(),
+    claimedMissions: state.claimedMissions,
+    rank: state.rank,
+    cards: state.cards,
     generators: state.generators.map((g) => ({
       id: g.id,
       quantity: g.quantity.toString(),
@@ -123,12 +125,9 @@ function deserialize(raw: string): GameState | null {
       upgradeTicketMultiplierRank: Number(saved.upgradeTicketMultiplierRank) || 0,
       upgradeGeneratorCostHalfRank: Number(saved.upgradeGeneratorCostHalfRank) || 0,
       upgradeMilestoneDoublerRank: Number(saved.upgradeMilestoneDoublerRank) || 0,
-      prestigePoints: Decimal.fromString(saved.prestigePoints ?? "0"),
-      prestigeThresholdsClaimed: saved.prestigeThresholdsClaimed != null
-        ? (typeof saved.prestigeThresholdsClaimed === "number"
-          ? Decimal.fromNumber(saved.prestigeThresholdsClaimed)
-          : Decimal.fromString(saved.prestigeThresholdsClaimed))
-        : Decimal.dZero,
+      claimedMissions: Array.isArray(saved.claimedMissions) ? saved.claimedMissions : [],
+      rank: Number(saved.rank) || 1,
+      cards: (saved.cards && typeof saved.cards === "object") ? saved.cards : {},
       generators,
       options: {
         showFPS: shared.showFPS,

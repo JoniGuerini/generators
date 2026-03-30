@@ -8,11 +8,10 @@ import { useT } from "@/locale";
 export function Header() {
   const fps = useFPS();
   const t = useT();
-  const { baseResource, ticketCurrency, milestoneCurrency, prestigePoints, showFPS, ticketsPerSec } = useGameSelector((state) => ({
+  const { baseResource, ticketCurrency, milestoneCurrency, showFPS, ticketsPerSec } = useGameSelector((state) => ({
     baseResource: state.baseResource,
     ticketCurrency: state.ticketCurrency,
     milestoneCurrency: state.milestoneCurrency,
-    prestigePoints: state.prestigePoints,
     showFPS: state.options?.showFPS === true,
     ticketsPerSec: getTicketsPerSecond(
       state.ticketTradeMilestoneCount,
@@ -67,18 +66,6 @@ export function Header() {
           </span>
         </div>
 
-        <div
-          className="flex w-[8rem] sm:w-[10rem] flex-col gap-0.5 overflow-hidden rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5 shadow-sm"
-          title={t.header.prestigeTooltip}
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-amber-500 text-xs" aria-hidden>★</span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.header.prestige}</span>
-          </div>
-          <span className="truncate text-lg font-bold tabular-nums text-amber-100">
-            {formatNumber(prestigePoints)}
-          </span>
-        </div>
       </div>
 
       {showFPS && (

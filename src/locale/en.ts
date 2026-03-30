@@ -8,13 +8,12 @@ export const en: Translations = {
     ticketsTooltip: "Purchase Currency",
     upgrades: "Upgrades",
     upgradesTooltip: "Milestone Currency",
-    prestige: "Prestige",
-    prestigeTooltip: "Prestige Points",
     fps: "FPS",
     fpsTooltip: "Frames per second",
   },
   footer: {
     upgrades: "Upgrades",
+    missions: "Missions",
     back: "Back",
   },
   settings: {
@@ -78,8 +77,42 @@ export const en: Translations = {
     claimAndContinue: "Claim and continue",
     continue: "Continue",
   },
-  prestige: {
-    ready: "Ready",
+  missions: {
+    title: "Mission",
+    reward: "Reward",
+    claim: "Claim",
+    resource: "Resource",
+    rank: "Rank",
+    rankMax: "Max",
+    rankUp: "Rank Up!",
+    completed: "Mission Complete!",
+    cardsReward: "Upgrade Cards",
+    pageTitle: "All Missions",
+    allCompleted: "All missions for this rank have been completed!",
+    generatorCount: (count: string) =>
+      `Have ${count}`,
+    milestoneCurrencyTotal: (count: string) =>
+      `Collect ${count} ◆ Upgrades`,
+    milestoneCurrencyCollect: (count: string) => `Collect ${count}`,
+    milestoneCurrencySuffix: "Upgrades",
+    baseResourceTotal: (amount: string) =>
+      `Accumulate ${amount} ● Resource`,
+    baseResourceAccumulate: (amount: string) => `Accumulate ${amount}`,
+    baseResourceSuffix: "Resource",
+  },
+  cards: {
+    cycleSpeed: "Cycle Time",
+    production: "Production",
+    critChance: "Crit Chance",
+    critMultiplier: "Crit Efficiency",
+    ticketMultiplier: "Multiply Tickets",
+    generatorCostHalf: "Cost ÷2",
+    milestoneDoubler: "Double ◆",
+    generator: "Generator",
+    common: "Common",
+    uncommon: "Uncommon",
+    rare: "Rare",
+    needed: "needed",
   },
   upgradesPage: {
     generators: "Generators",
@@ -101,6 +134,11 @@ export const en: Translations = {
   },
   docs: {
     title: "Game Documentation",
+    tabBasics: "Basics",
+    tabCurrencies: "Currencies",
+    tabGenerators: "Generators",
+    tabUpgrades: "Upgrades",
+    tabCards: "Cards",
     basicsTitle: "The Basics",
     basicsText:
       'The main goal is to accumulate <strong>Base Resource (●)</strong> through Generators. Progress is infinite, based on buying increasingly powerful generators, measured by the ability to reach unimaginable numbers (using <code class="rounded bg-zinc-700 px-1 text-sm text-pink-400">break_eternity.js</code> to handle absurdly large numbers).',
@@ -164,5 +202,31 @@ export const en: Translations = {
     offlineTitle: "Offline Simulation",
     offlineText:
       "The game calculates your progress while the tab was closed. Since higher generators create lower generators (which in turn generate base resource), the offline math uses the same formulas in a loop to create a hyper-realistic prediction of what you would have generated during your time away.",
+    cardsIntro:
+      "To buy upgrades, in addition to spending <strong>◆ Milestone Currency</strong>, you need specific <strong>Cards</strong> for that upgrade. Cards are obtained as rewards from completing missions.",
+    cardsHowTitle: "How to Get Cards",
+    cardsHowDesc:
+      "Each completed mission grants <strong>2 to 4 random cards</strong>. Cards are only drawn for <strong>generators you have already unlocked</strong> (purchased at least 1 unit). Global cards (Cost ÷2, Double ◆, Multiply Tickets) can appear regardless.",
+    cardsNeededTitle: "Cards Needed per Rank",
+    cardsNeededDesc:
+      "The number of cards needed to rank up an upgrade grows progressively:",
+    cardsTableRank: "Rank",
+    cardsTableNeeded: "Cards Needed",
+    cardsRarityTitle: "Rarities",
+    cardsRarityDesc:
+      "Each card has a rarity that determines its drop probability:",
+    cardsTableRarity: "Rarity",
+    cardsTableChance: "Chance",
+    cardsTableTypes: "Types",
+    cardsCommon: "Common",
+    cardsCommonTypes: "Cycle Time, Production",
+    cardsUncommon: "Uncommon",
+    cardsUncommonTypes: "Crit Chance",
+    cardsRare: "Rare",
+    cardsRareTypes: "Crit Efficiency, Cost ÷2, Double ◆, Multiply Tickets",
+    cardsRulesTitle: "Important Rules",
+    cardsRule1: "Each card is specific: a Cycle Time card for Generator 1 only works for that exact upgrade.",
+    cardsRule2: "Missions only grant cards for generators the player has already unlocked.",
+    cardsRule3: "Cards are consumed when purchasing the upgrade.",
   },
 } as const;

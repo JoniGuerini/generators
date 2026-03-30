@@ -17,9 +17,9 @@ import { UpgradesPage } from "./UpgradesPage";
 import { OfflineWelcomeCard } from "./OfflineWelcomeCard";
 
 import { DocumentationPage } from "./DocumentationPage";
-import { PrestigeBar } from "./PrestigeBar";
+import { MissionsPage } from "./MissionsPage";
 
-export type MainView = "game" | "upgrades" | "docs";
+export type MainView = "game" | "upgrades" | "missions" | "docs";
 
 let pendingOfflineGains: OfflineGains | null = null;
 let initialLoadTimestamp: number | null = null;
@@ -103,7 +103,6 @@ export function GameScreen() {
     <BuyModeProvider>
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-zinc-800 text-zinc-100">
         <Header />
-        <PrestigeBar />
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden px-2 py-2">
           {view === "game" ? (
             <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden scrollbar-none">
@@ -111,10 +110,10 @@ export function GameScreen() {
             </div>
           ) : view === "upgrades" ? (
             <UpgradesPage />
+          ) : view === "missions" ? (
+            <MissionsPage />
           ) : (
-            <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">
-              <DocumentationPage />
-            </div>
+            <DocumentationPage />
           )}
         </main>
         <BottomMenu

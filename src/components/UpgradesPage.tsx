@@ -3,6 +3,8 @@ import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { GENERATOR_DEFS } from "@/engine/constants";
 import { useT } from "@/locale";
+import { getCardKey, getCardsNeeded, CARD_RARITY } from "@/engine/cards";
+import type { CardRarity } from "@/engine/cards";
 import {
   getEffectiveCycleTimeSeconds,
   getEffectiveProductionPerCycle,
@@ -26,10 +28,14 @@ import { useHoldToRepeat } from "@/hooks/useHoldToRepeat";
 
 type UpgradesTab = "geradores" | "tickets";
 
-/** Largura mínima do botão para caber "◆ 100" e "+1 ▲/s" em uma linha */
 const UPGRADE_BUTTON_WIDTH = "10rem";
 
-/** Uma linha de upgrade: área de info + botão do mesmo tamanho em todos os cards */
+function HighlightCoin({ text }: { text: string }) {
+  const parts = text.split("◆");
+  if (parts.length === 1) return <>{text}</>;
+  return <>{parts[0]}<span className="text-violet-400">◆</span>{parts[1]}</>;
+}
+
 function UpgradeRow({
   label,
   sublabel,
@@ -43,6 +49,11 @@ function UpgradeRow({
   width,
   flexible,
   holdTitle,
+  progress,
+  progressColor = "bg-cyan-600",
+  cardCount,
+  cardsNeeded,
+  cardRarity,
 }: {
   label: React.ReactNode;
   sublabel?: string;
@@ -56,24 +67,72 @@ function UpgradeRow({
   width?: string;
   flexible?: boolean;
   holdTitle?: string;
+  progress?: number;
+  progressColor?: string;
+  cardCount?: number;
+  cardsNeeded?: number;
+  cardRarity?: CardRarity;
 }) {
   const rowWidth = width || "18.5rem";
   const buttonActiveClass =
     buttonVariant === "base"
       ? "btn-3d btn-3d--cyan bg-cyan-600 text-white hover:bg-cyan-500"
       : "btn-3d btn-3d--violet bg-violet-600 text-white hover:bg-violet-500";
+  const hasCards = cardsNeeded != null;
+  const enoughCards = !hasCards || (cardCount ?? 0) >= cardsNeeded!;
+  const effectiveCanBuy = canBuy && enoughCards;
   const hold = useHoldToRepeat(onBuy);
+  const hasProgress = progress != null;
+  const pct = hasProgress ? Math.min(progress * 100, 100) : 0;
+
   return (
     <div
-      className={`flex flex-nowrap items-center justify-between gap-3 rounded-lg bg-zinc-900/70 px-3 py-2 ${flexible ? "min-w-0 flex-1" : ""}`}
+      className={`flex flex-nowrap items-center justify-between gap-3 rounded-lg bg-zinc-900/70 px-3 py-1.5 ${flexible ? "min-w-0 flex-1" : ""}`}
       style={flexible ? undefined : { width: rowWidth, minWidth: rowWidth }}
     >
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
         <span className="text-sm text-zinc-300">{label}</span>
-        {sublabel && (
-          <span className="text-xs text-zinc-500">{sublabel}</span>
-        )}
       </div>
+      {hasCards && !maxed && (() => {
+        const owned = cardCount ?? 0;
+        const needed = cardsNeeded!;
+        const pctCards = needed > 0 ? Math.min((owned / needed) * 100, 100) : 0;
+        const full = owned >= needed;
+        const fillColor = cardRarity === "rare"
+          ? "bg-violet-500"
+          : cardRarity === "uncommon"
+            ? "bg-green-500"
+            : "bg-zinc-400";
+        const textColor = cardRarity === "rare"
+          ? "text-violet-300"
+          : cardRarity === "uncommon"
+            ? "text-green-300"
+            : "text-zinc-300";
+        const glowClass = full
+          ? cardRarity === "rare"
+            ? "ring-1 ring-violet-500/50"
+            : cardRarity === "uncommon"
+              ? "ring-1 ring-green-500/50"
+              : "ring-1 ring-zinc-400/50"
+          : "";
+        return (
+          <div className={`relative flex h-6 w-12 shrink-0 items-center justify-center overflow-hidden rounded ${glowClass}`}>
+            <div className="absolute inset-0 bg-zinc-800" />
+            <div
+              className={`absolute inset-y-0 left-0 ${fillColor} transition-[width] duration-300`}
+              style={{ width: `${pctCards}%` }}
+            />
+            <span className={`relative z-10 text-[10px] font-bold tabular-nums drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${full ? "text-white" : textColor}`}>
+              {owned}/{needed}
+            </span>
+          </div>
+        );
+      })()}
+      {sublabel && (
+        <span className="shrink-0 rounded bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-500">
+          {sublabel}
+        </span>
+      )}
       {maxed ? (
         <span
           className="flex h-9 shrink-0 items-center justify-center rounded-lg bg-zinc-700 px-3 text-xs font-medium text-zinc-400"
@@ -81,6 +140,30 @@ function UpgradeRow({
         >
           {maxedLabel}
         </span>
+      ) : hasProgress ? (
+        <button
+          type="button"
+          onPointerDown={hold.onPointerDown}
+          onPointerUp={hold.onPointerUp}
+          onPointerCancel={hold.onPointerCancel}
+          onLostPointerCapture={hold.onLostPointerCapture}
+          onKeyDown={hold.onKeyDown}
+          disabled={!effectiveCanBuy}
+          title={cost ? `${cost}${holdTitle ? ` — ${holdTitle}` : ""}` : undefined}
+          style={{ minWidth: UPGRADE_BUTTON_WIDTH }}
+          className={`relative flex h-9 shrink-0 items-center justify-center overflow-hidden rounded-lg px-3 text-sm font-medium whitespace-nowrap touch-manipulation select-none ${
+            effectiveCanBuy
+              ? "btn-3d btn-3d--cyan text-white"
+              : "btn-3d btn-3d--zinc cursor-default text-zinc-400"
+          }`}
+        >
+          <div className="absolute inset-0 bg-zinc-700" />
+          <div
+            className={`absolute inset-y-0 left-0 ${progressColor} transition-[width] duration-300 ease-linear`}
+            style={{ width: `${pct}%` }}
+          />
+          <span className="relative z-10 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">{buttonLabel}</span>
+        </button>
       ) : (
         <button
           type="button"
@@ -89,11 +172,11 @@ function UpgradeRow({
           onPointerCancel={hold.onPointerCancel}
           onLostPointerCapture={hold.onLostPointerCapture}
           onKeyDown={hold.onKeyDown}
-          disabled={!canBuy}
+          disabled={!effectiveCanBuy}
           title={cost ? `${cost}${holdTitle ? ` — ${holdTitle}` : ""}` : undefined}
           style={{ minWidth: UPGRADE_BUTTON_WIDTH }}
           className={`flex h-9 shrink-0 items-center justify-center rounded-lg px-3 text-sm font-medium whitespace-nowrap touch-manipulation select-none ${
-            canBuy ? buttonActiveClass : "btn-3d btn-3d--zinc cursor-not-allowed bg-zinc-700 text-zinc-500"
+            effectiveCanBuy ? buttonActiveClass : "btn-3d btn-3d--zinc cursor-not-allowed bg-zinc-700 text-zinc-500"
           }`}
         >
           {buttonLabel}
@@ -120,6 +203,7 @@ export function UpgradesPage() {
     upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank,
     generatorsData,
+    cards,
   } = useGameSelector((state) => {
     const everOwnedIds = state.generators.filter(g => g.everOwned).map(g => g.id);
     const generatorsData = state.generators.map(g => ({
@@ -139,6 +223,7 @@ export function UpgradesPage() {
       upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
       upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
       generatorsData,
+      cards: state.cards,
     };
   }, (a, b) => 
     a.milestoneCurrency.equals(b.milestoneCurrency) &&
@@ -148,6 +233,7 @@ export function UpgradesPage() {
     a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
     a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
     a.generatorIdsForUpgrades.join() === b.generatorIdsForUpgrades.join() &&
+    a.cards === b.cards &&
     a.generatorsData.length === b.generatorsData.length &&
     a.generatorsData.every((g, i) => 
       g.upgradeCycleSpeedRank === b.generatorsData[i].upgradeCycleSpeedRank && 
@@ -222,11 +308,14 @@ export function UpgradesPage() {
                     </div>
                   </div>
                 }
-                sublabel={`${t.upgradesPage.rank} ×2: ${upgradeTicketMultiplierRank}`}
+                sublabel={`×2: ${upgradeTicketMultiplierRank}`}
                 cost={`◆ ${formatNumber(costTicketMultiplier)}`}
                 canBuy={canBuyTicketMultiplier}
                 onBuy={() => dispatch({ type: "BUY_TICKET_MULTIPLIER_UPGRADE" })}
                 buttonLabel={`◆ ${formatNumber(costTicketMultiplier)}`}
+                cardCount={cards[getCardKey("ticketMultiplier")] ?? 0}
+                cardsNeeded={getCardsNeeded(upgradeTicketMultiplierRank)}
+                cardRarity={CARD_RARITY.ticketMultiplier}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -244,44 +333,48 @@ export function UpgradesPage() {
                     </div>
                   </div>
                 }
-                sublabel={`${t.upgradesPage.tradesDone}: ${ticketTradeMilestoneCount}`}
+                sublabel={`${ticketTradeMilestoneCount}`}
                 cost={`● ${formatNumber(tradeCost)}`}
                 canBuy={canTrade}
                 onBuy={() => dispatch({ type: "TRADE_BASE_FOR_TICKET_RATE" })}
                 buttonLabel="+1 ▲/s"
                 buttonVariant="base"
+                progress={tradeCost.gt(0) ? baseResource.div(tradeCost).toNumber() : 0}
+                progressColor="bg-cyan-500"
               />
             </div>
           </div>
         ) : (
           <div className="space-y-5">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-lg text-violet-400" aria-hidden>½</div>
-              {(() => {
-                const rank = upgradeGeneratorCostHalfRank;
-                const costHalf = getUpgradeCostGeneratorCostHalf(rank);
-                const canBuyHalf = milestoneCurrency.gte(costHalf);
-                return (
-                  <UpgradeRow
-                    flexible
-                    label={
-                      <div className="flex flex-col gap-0.5">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-lg text-violet-400" aria-hidden>½</div>
+                {(() => {
+                  const rank = upgradeGeneratorCostHalfRank;
+                  const costHalf = getUpgradeCostGeneratorCostHalf(rank);
+                  const canBuyHalf = milestoneCurrency.gte(costHalf);
+                  return (
+                    <UpgradeRow
+                      flexible
+                      label={
                         <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.halfCostAll}</span>
-                        <span className="text-sm font-medium text-zinc-400">{t.upgradesPage.rank} {rank}</span>
-                      </div>
-                    }
-                    cost={`◆ ${formatNumber(costHalf)}`}
-                    canBuy={canBuyHalf}
-                    onBuy={() =>
-                      dispatch({ type: "BUY_GENERATOR_COST_HALF_UPGRADE" })
-                    }
-                    buttonLabel={`◆ ${formatNumber(costHalf)}`}
-                  />
-                );
-              })()}
-            </div>
+                      }
+                      sublabel={`${rank}`}
+                      cost={`◆ ${formatNumber(costHalf)}`}
+                      canBuy={canBuyHalf}
+                      onBuy={() =>
+                        dispatch({ type: "BUY_GENERATOR_COST_HALF_UPGRADE" })
+                      }
+                      buttonLabel={`◆ ${formatNumber(costHalf)}`}
+                      cardCount={cards[getCardKey("generatorCostHalf")] ?? 0}
+                      cardsNeeded={getCardsNeeded(rank)}
+                      cardRarity={CARD_RARITY.generatorCostHalf}
+                    />
+                  );
+                })()}
+              </div>
 
-            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-sm font-bold text-violet-400" aria-hidden>×2</div>
               {(() => {
                 const rank = upgradeMilestoneDoublerRank;
@@ -294,24 +387,28 @@ export function UpgradesPage() {
                     flexible
                     label={
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.doubleMilestoneReward}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500"><HighlightCoin text={t.upgradesPage.doubleMilestoneReward} /></span>
                         <div className="flex items-center gap-1.5 text-sm font-medium">
-                          <span className="text-zinc-400">×{currentMult}</span>
+                          <span className="text-zinc-400">×{formatNumber(Decimal.fromNumber(currentMult))}</span>
                           <span className="text-violet-400/80">→</span>
-                          <span className="text-white">×{nextMult}</span>
+                          <span className="text-white">×{formatNumber(Decimal.fromNumber(nextMult))}</span>
                         </div>
                       </div>
                     }
-                    sublabel={`${t.upgradesPage.rank} ${rank}`}
+                    sublabel={`${rank}`}
                     cost={`◆ ${formatNumber(costDoubler)}`}
                     canBuy={canBuyDoubler}
                     onBuy={() =>
                       dispatch({ type: "BUY_MILESTONE_DOUBLER_UPGRADE" })
                     }
                     buttonLabel={`◆ ${formatNumber(costDoubler)}`}
+                    cardCount={cards[getCardKey("milestoneDoubler")] ?? 0}
+                    cardsNeeded={getCardsNeeded(rank)}
+                    cardRarity={CARD_RARITY.milestoneDoubler}
                   />
                 );
               })()}
+              </div>
             </div>
 
             <div>
@@ -389,9 +486,7 @@ export function UpgradesPage() {
                               </div>
                             </div>
                           }
-                          sublabel={`${t.upgradesPage.rank} ${cycleRank}${
-                            maxCycleRank > 0 ? ` / ${maxCycleRank}` : ""
-                          }`}
+                          sublabel={maxCycleRank > 0 ? `${cycleRank}/${maxCycleRank}` : `${cycleRank}`}
                           cost={
                             costCycle
                               ? `◆ ${formatNumber(costCycle)}`
@@ -408,6 +503,9 @@ export function UpgradesPage() {
                           buttonLabel={costCycle ? `◆ ${formatNumber(costCycle)}` : "—"}
                           maxed={cycleRank >= maxCycleRank}
                           maxedLabel={t.upgradesPage.maxed}
+                          cardCount={cards[getCardKey("cycleSpeed", id)] ?? 0}
+                          cardsNeeded={getCardsNeeded(cycleRank)}
+                          cardRarity={CARD_RARITY.cycleSpeed}
                         />
                         <UpgradeRow
                           flexible
@@ -421,7 +519,7 @@ export function UpgradesPage() {
                               </div>
                             </div>
                           }
-                          sublabel={`${t.upgradesPage.rank} ${prodRank}`}
+                          sublabel={`${prodRank}`}
                           cost={`◆ ${formatNumber(costProd)}`}
                           canBuy={canBuyProd}
                           onBuy={() =>
@@ -432,6 +530,9 @@ export function UpgradesPage() {
                             })
                           }
                           buttonLabel={`◆ ${formatNumber(costProd)}`}
+                          cardCount={cards[getCardKey("production", id)] ?? 0}
+                          cardsNeeded={getCardsNeeded(prodRank)}
+                          cardRarity={CARD_RARITY.production}
                         />
                         {(() => {
                           const critRank = gen.upgradeCritChanceRank;
@@ -464,13 +565,16 @@ export function UpgradesPage() {
                                     </div>
                                   </div>
                                 }
-                                sublabel={`${t.upgradesPage.rank} ${critRank}${MAX_CRIT_CHANCE_RANK > 0 ? ` / ${MAX_CRIT_CHANCE_RANK}` : ""}`}
+                                sublabel={MAX_CRIT_CHANCE_RANK > 0 ? `${critRank}/${MAX_CRIT_CHANCE_RANK}` : `${critRank}`}
                                 cost={costCrit ? `◆ ${formatNumber(costCrit)}` : ""}
                                 canBuy={canBuyCrit ?? false}
                                 onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "critChance" })}
                                 buttonLabel={costCrit ? `◆ ${formatNumber(costCrit)}` : "—"}
                                 maxed={critRank >= MAX_CRIT_CHANCE_RANK}
                                 maxedLabel={t.upgradesPage.maxed}
+                                cardCount={cards[getCardKey("critChance", id)] ?? 0}
+                                cardsNeeded={getCardsNeeded(critRank)}
+                                cardRarity={CARD_RARITY.critChance}
                               />
                               <UpgradeRow
                                 flexible
@@ -478,17 +582,20 @@ export function UpgradesPage() {
                                   <div className="flex flex-col gap-0.5">
                                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.critEfficiency}</span>
                                     <div className="flex items-center gap-1.5 text-sm font-medium">
-                                      <span className="text-zinc-400">×{currentCritMult}</span>
+                                      <span className="text-zinc-400">×{formatNumber(Decimal.fromNumber(currentCritMult))}</span>
                                       <span className="text-violet-400/80">→</span>
-                                      <span className="text-white">×{nextCritMult}</span>
+                                      <span className="text-white">×{formatNumber(Decimal.fromNumber(nextCritMult))}</span>
                                     </div>
                                   </div>
                                 }
-                                sublabel={`${t.upgradesPage.rank} ${critMultRank}`}
+                                sublabel={`${critMultRank}`}
                                 cost={`◆ ${formatNumber(costCritMult)}`}
                                 canBuy={canBuyCritMult}
                                 onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "critMultiplier" })}
                                 buttonLabel={`◆ ${formatNumber(costCritMult)}`}
+                                cardCount={cards[getCardKey("critMultiplier", id)] ?? 0}
+                                cardsNeeded={getCardsNeeded(critMultRank)}
+                                cardRarity={CARD_RARITY.critMultiplier}
                               />
                             </>
                           );

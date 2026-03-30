@@ -25,6 +25,7 @@ export interface GeneratorDef {
   cost: Decimal;
   produces: GeneratorId | "base";
   costPreviousGenerator: Decimal;
+  unlockRequirement: Decimal;
 }
 
 const BASE_CYCLE_TIMES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
@@ -54,6 +55,19 @@ const BASE_PREV_GEN_COSTS: Decimal[] = [
   Decimal.pow(10, 9),
 ];
 
+const UNLOCK_REQUIREMENTS: Decimal[] = [
+  Decimal.dZero,
+  Decimal.fromNumber(25),
+  Decimal.fromNumber(125),
+  Decimal.fromNumber(250),
+  Decimal.fromNumber(2_500),
+  Decimal.fromNumber(250_000),
+  Decimal.pow(10, 6).mul(2.5),
+  Decimal.pow(10, 7).mul(2.5),
+  Decimal.pow(10, 8).mul(2.5),
+  Decimal.pow(10, 9).mul(2.5),
+];
+
 export const GENERATOR_IDS: GeneratorId[] = [];
 export const LINE_GENERATOR_IDS: GeneratorId[][] = [];
 export const GENERATOR_DEFS: Record<GeneratorId, GeneratorDef> = {};
@@ -78,10 +92,17 @@ for (let line = 1; line <= LINE_COUNT; line++) {
       cost: BASE_COSTS[gen - 1],
       produces: gen === 1 ? "base" : makeGeneratorId(line, gen - 1),
       costPreviousGenerator: BASE_PREV_GEN_COSTS[gen - 1],
+      unlockRequirement: UNLOCK_REQUIREMENTS[gen - 1],
     };
   }
 
   LINE_GENERATOR_IDS.push(lineIds);
+}
+
+export function getUnlockRequirement(id: GeneratorId): { previousGenId: GeneratorId | null; required: Decimal } {
+  const { line, gen } = parseGeneratorId(id);
+  if (gen <= 1) return { previousGenId: null, required: Decimal.dZero };
+  return { previousGenId: makeGeneratorId(line, gen - 1), required: GENERATOR_DEFS[id].unlockRequirement };
 }
 
 export function getLineGeneratorIds(line: number): GeneratorId[] {

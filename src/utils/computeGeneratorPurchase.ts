@@ -1,6 +1,6 @@
 import Decimal from "break_eternity.js";
 import type { GameState } from "@/store/gameState";
-import { GENERATOR_DEFS, type GeneratorId, parseGeneratorId, makeGeneratorId, GENERATORS_PER_LINE } from "@/engine/constants";
+import { GENERATOR_DEFS, type GeneratorId, parseGeneratorId, makeGeneratorId, GENERATORS_PER_LINE, getUnlockRequirement } from "@/engine/constants";
 import { getEffectiveGeneratorCost } from "@/engine/upgrades";
 import { getNextMilestoneFromQuantity } from "@/utils/milestones";
 import type { BuyMode } from "@/contexts/BuyModeContext";
@@ -111,7 +111,15 @@ export function computeGeneratorPurchase(
   const canBuy =
     Decimal.gte(baseResource, effectiveCost) &&
     Decimal.gte(ticketCurrency, Decimal.fromNumber(ticketCostPerUnit)) &&
-    hasEnoughPrev;
+    hasEnoughPrev &&
+    (() => {
+      const unlock = getUnlockRequirement(id);
+      if (unlock.required.lte(Decimal.dZero)) return true;
+      const uPrev = unlock.previousGenId
+        ? state.generators.find((g) => g.id === unlock.previousGenId)?.quantity ?? Decimal.dZero
+        : Decimal.dZero;
+      return uPrev.gte(unlock.required);
+    })();
 
   const quantity = gen.quantity;
   const nextGenCost = buyMode === "proximo"

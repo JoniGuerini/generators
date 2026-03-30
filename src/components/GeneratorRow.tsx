@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, memo } from "react";
 import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { useBuyMode } from "@/contexts/BuyModeContext";
-import { GENERATOR_DEFS, parseGeneratorId, getLineColor, LINE_COLOR_CLASSES } from "@/engine/constants";
+import { GENERATOR_DEFS, parseGeneratorId, getLineColor, LINE_COLOR_CLASSES, getUnlockRequirement } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import {
   getEffectiveCycleTimeSeconds,
@@ -60,6 +60,8 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     prevGenQuantity,
     canBuy,
     maxAffordable,
+    isUnlocked,
+    unlockPrevQty,
   } = useGameSelector((state) => {
     const generator = state.generators.find((g) => g.id === id);
     if (!generator) return { gen: null } as any;
@@ -88,7 +90,14 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     if (maxByPrev.lt(maxAffordable)) maxAffordable = maxByPrev;
 
     const hasEnoughPrev = effectiveCostPrev.lte(Decimal.dZero) || def.produces === "base" || (prevGenQuantity ? Decimal.gte(prevGenQuantity, effectiveCostPrev) : false);
-    const canBuy = Decimal.gte(baseResource, effectiveCost) && Decimal.gte(ticketCurrency, Decimal.fromNumber(ticketCostPerUnit)) && hasEnoughPrev;
+
+    const unlock = getUnlockRequirement(id);
+    const unlockPrevQty = unlock.previousGenId
+      ? state.generators.find((g) => g.id === unlock.previousGenId)?.quantity ?? Decimal.dZero
+      : Decimal.dZero;
+    const isUnlocked = unlock.required.lte(Decimal.dZero) || unlockPrevQty.gte(unlock.required);
+
+    const canBuy = isUnlocked && Decimal.gte(baseResource, effectiveCost) && Decimal.gte(ticketCurrency, Decimal.fromNumber(ticketCostPerUnit)) && hasEnoughPrev;
 
     return {
       gen: generator,
@@ -99,6 +108,8 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       prevGenQuantity,
       canBuy,
       maxAffordable,
+      isUnlocked,
+      unlockPrevQty,
     };
   }, (a, b) => {
     if (!a.gen || !b.gen) return a.gen === b.gen;
@@ -109,6 +120,8 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
       a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
       a.canBuy === b.canBuy &&
+      a.isUnlocked === b.isUnlocked &&
+      a.unlockPrevQty.equals(b.unlockPrevQty) &&
       a.maxAffordable.equals(b.maxAffordable) &&
       (a.prevGenQuantity && b.prevGenQuantity
         ? a.prevGenQuantity.equals(b.prevGenQuantity)
@@ -259,7 +272,33 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const canClaim = pendingMilestones > 0;
   const isLocked = !gen.everOwned;
 
-  /* Gerador ainda não desbloqueado: visual diferente, "Compre para desbloquear" + botão de compra */
+  const unlock = getUnlockRequirement(id);
+
+  if (isLocked && !isUnlocked) {
+    const pct = unlock.required.gt(Decimal.dZero)
+      ? Math.min(unlockPrevQty.div(unlock.required).toNumber() * 100, 100)
+      : 100;
+    return (
+      <div className="flex h-[40px] min-w-0 flex-nowrap items-center gap-2">
+        <div
+          className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-dashed border-zinc-500 bg-zinc-700/80 text-sm font-bold text-zinc-500"
+          aria-label={def.name}
+        >
+          {generatorNumber}
+        </div>
+        <div className="relative flex h-[40px] min-w-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-zinc-800/60">
+          <div className="absolute inset-y-0 left-0 bg-zinc-700/50 transition-[width] duration-500" style={{ width: `${pct}%` }} />
+          <span className="relative z-10 flex items-center gap-1.5 text-center text-xs font-medium text-zinc-500">
+            <span className={`${colorClasses.btn3d} inline-flex h-4 w-4 items-center justify-center rounded ${colorClasses.bg} text-[8px] font-bold text-white`}>
+              {unlock.previousGenId ? parseGeneratorId(unlock.previousGenId).gen : ""}
+            </span>
+            {formatNumber(unlockPrevQty)} / {formatNumber(unlock.required)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   if (isLocked) {
     return (
       <div className="flex h-[40px] min-w-0 flex-nowrap items-center gap-2">

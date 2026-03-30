@@ -1,7 +1,7 @@
 import Decimal from "break_eternity.js";
 import type { GameState } from "./gameState";
 import { getInitialState } from "./gameState";
-import { GENERATOR_DEFS, parseGeneratorId } from "@/engine/constants";
+import { GENERATOR_DEFS, parseGeneratorId, getUnlockRequirement } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import {
   getCurrentMilestoneCount,
@@ -255,6 +255,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const def = GENERATOR_DEFS[action.id];
       const genIndex = state.generators.findIndex((g) => g.id === action.id);
       if (genIndex < 0 || action.amount < 1) return state;
+      const unlockReq = getUnlockRequirement(action.id);
+      if (unlockReq.required.gt(Decimal.dZero) && unlockReq.previousGenId) {
+        const prevQty = state.generators.find((g) => g.id === unlockReq.previousGenId)?.quantity ?? Decimal.dZero;
+        if (prevQty.lt(unlockReq.required)) return state;
+      }
       const effectiveCost = getEffectiveGeneratorCost(
         def.cost,
         state.upgradeGeneratorCostHalfRank

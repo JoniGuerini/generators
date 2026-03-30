@@ -154,7 +154,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     ? getEffectiveCycleTimeSeconds(def.cycleTimeSeconds, gen.upgradeCycleSpeedRank)
     : 1;
   const showCycleTime = cycleTimeSecForBar >= 1;
-  const hasQuantityForBar = gen ? Decimal.gt(gen.quantity, Decimal.dZero) : false;
+  const hasQuantityForBar = gen ? (Decimal.gt(gen.quantity, Decimal.dZero) || gen.manualCycleActive) : false;
   const progressBarRef = useSmoothCycleProgress(
     gen?.cycleStartTime ?? 0,
     cycleTimeSecForBar,
@@ -362,14 +362,28 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     );
   }
 
+  const canManualCycle = !hasQuantity && gen.everOwned && !gen.manualCycleActive;
+
   return (
     <div className="flex h-[40px] min-w-0 flex-nowrap items-center gap-2">
-      <div
-        className={`${colorClasses.btn3d} flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-md ${colorClasses.bg} text-sm font-bold text-white`}
-        aria-label={def.name}
-      >
-        {generatorNumber}
-      </div>
+      {canManualCycle ? (
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "MANUAL_CYCLE", id })}
+          className={`btn-3d ${colorClasses.btn3d} flex h-[40px] w-[40px] shrink-0 cursor-pointer items-center justify-center rounded-md ${colorClasses.bg} text-sm font-bold text-white active:translate-y-[2px]`}
+          aria-label={def.name}
+          title={t.generator.clickToProduce}
+        >
+          {generatorNumber}
+        </button>
+      ) : (
+        <div
+          className={`${colorClasses.btn3d} flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-md ${colorClasses.bg} text-sm font-bold text-white`}
+          aria-label={def.name}
+        >
+          {generatorNumber}
+        </div>
+      )}
 
       {/* Barra de progresso para próximo marco (10, 100, 1k…) — clicável para resgatar */}
       <div

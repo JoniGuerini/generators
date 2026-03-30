@@ -113,7 +113,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       let generatorsChanged = false;
       const updatedGenerators = state.generators.map((gen) => {
-        if (Decimal.lte(gen.quantity, Decimal.dZero)) {
+        const isManual = gen.manualCycleActive && Decimal.lte(gen.quantity, Decimal.dZero);
+        if (Decimal.lte(gen.quantity, Decimal.dZero) && !isManual) {
           return gen;
         }
 
@@ -132,20 +133,28 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
         if (cyclesCompleted >= 1) {
           generatorsChanged = true;
-          progress -= cyclesCompleted;
+
+          if (isManual) {
+            progress = 0;
+          } else {
+            progress -= cyclesCompleted;
+          }
+
+          const effectiveQuantity = isManual ? Decimal.dOne : gen.quantity;
+          const effectiveCycles = isManual ? 1 : cyclesCompleted;
 
           const critChance = getCritChance(gen.upgradeCritChanceRank);
           let produced: Decimal;
           if (critChance > 0) {
             const critMult = getCritMultiplier(gen.upgradeCritMultiplierRank);
             let critCount = 0;
-            for (let c = 0; c < cyclesCompleted; c++) {
+            for (let c = 0; c < effectiveCycles; c++) {
               if (Math.random() < critChance) critCount++;
             }
-            const normalCycles = cyclesCompleted - critCount;
-            produced = productionPerCycle.mul(gen.quantity).mul(normalCycles + critCount * critMult);
+            const normalCycles = effectiveCycles - critCount;
+            produced = productionPerCycle.mul(effectiveQuantity).mul(normalCycles + critCount * critMult);
           } else {
-            produced = productionPerCycle.mul(gen.quantity).mul(cyclesCompleted);
+            produced = productionPerCycle.mul(effectiveQuantity).mul(effectiveCycles);
           }
 
           if (def.produces === "base") {
@@ -160,9 +169,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           generatorsChanged = true;
         }
 
+        const manualCycleActive = isManual && cyclesCompleted < 1 ? true : isManual ? false : gen.manualCycleActive;
         const cycleTimeMs = cycleTimeSec * 1000;
         const cycleStartTime = now - progress * cycleTimeMs;
-        return { ...gen, cycleProgress: progress, cycleStartTime };
+        return { ...gen, cycleProgress: progress, cycleStartTime, manualCycleActive };
       });
 
       const hasAnyGenerator = state.generators.some((g) =>
@@ -229,25 +239,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "MANUAL_CYCLE": {
-      const def = GENERATOR_DEFS[action.id];
       const gen = state.generators.find((g) => g.id === action.id);
-      if (!gen || gen.quantity.gt(Decimal.dZero)) return state;
-      const prodPerCycle = getEffectiveProductionPerCycle(def.productionPerCycle, gen.upgradeProductionRank);
-      if (def.produces === "base") {
-        const ln = parseGeneratorId(action.id).line;
-        const prevLS = state.lineStats[ln] ?? { baseResourceProduced: Decimal.dZero, milestoneCurrencyEarned: Decimal.dZero };
-        return {
-          ...state,
-          baseResource: state.baseResource.add(prodPerCycle),
-          lineStats: { ...state.lineStats, [ln]: { ...prevLS, baseResourceProduced: prevLS.baseResourceProduced.add(prodPerCycle) } },
-        };
-      }
-      const targetId = def.produces;
+      if (!gen || gen.quantity.gt(Decimal.dZero) || gen.manualCycleActive) return state;
       return {
         ...state,
         generators: state.generators.map((g) =>
-          g.id === targetId
-            ? { ...g, quantity: g.quantity.add(prodPerCycle), currentMilestoneTargetIndex: advanceMilestoneTargetIndex(g.quantity.add(prodPerCycle), g.currentMilestoneTargetIndex) }
+          g.id === action.id
+            ? { ...g, manualCycleActive: true, cycleProgress: 0, cycleStartTime: Date.now() }
             : g
         ),
       };

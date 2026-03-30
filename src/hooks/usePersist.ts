@@ -29,6 +29,7 @@ interface SavedState {
     id: string;
     quantity: string;
     everOwned?: boolean;
+    manualCycleActive?: boolean;
     cycleProgress: number;
     cycleStartTime: number;
     claimedMilestoneIndex?: number;
@@ -90,6 +91,7 @@ function serialize(state: GameState): string {
       id: g.id,
       quantity: g.quantity.toString(),
       everOwned: g.everOwned,
+      manualCycleActive: g.manualCycleActive,
       cycleProgress: g.cycleProgress,
       cycleStartTime: g.cycleStartTime,
       claimedMilestoneIndex: g.claimedMilestoneIndex,
@@ -125,6 +127,7 @@ function deserialize(raw: string): GameState | null {
             id: migratedId as GameState["generators"][0]["id"],
             quantity: q,
             everOwned,
+            manualCycleActive: !!g.manualCycleActive,
             cycleProgress: Number(g.cycleProgress) || 0,
             cycleStartTime: Number(g.cycleStartTime) || now,
             claimedMilestoneIndex: Number(g.claimedMilestoneIndex) || 0,

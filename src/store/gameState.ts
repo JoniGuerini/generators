@@ -1,10 +1,11 @@
 import Decimal from "break_eternity.js";
-import { GENERATOR_IDS, getLineGeneratorIds, type GeneratorId } from "@/engine/constants";
+import { GENERATOR_IDS, getLineGeneratorIds, makeGeneratorId, type GeneratorId } from "@/engine/constants";
 
 export interface GeneratorState {
   id: GeneratorId;
   quantity: Decimal;
   everOwned: boolean;
+  manualCycleActive: boolean;
   cycleProgress: number;
   cycleStartTime: number;
   claimedMilestoneIndex: number;
@@ -53,6 +54,7 @@ function initialGeneratorState(id: GeneratorId): GeneratorState {
     id,
     quantity: ZERO,
     everOwned: false,
+    manualCycleActive: false,
     cycleProgress: 0,
     cycleStartTime: now,
     claimedMilestoneIndex: 0,
@@ -90,7 +92,11 @@ export function getInitialState(): GameState {
     upgradeTicketMultiplierRank: 0,
     upgradeGeneratorCostHalfRank: 0,
     upgradeMilestoneDoublerRank: 0,
-    generators: GENERATOR_IDS.map((id) => initialGeneratorState(id)),
+    generators: GENERATOR_IDS.map((id) => {
+      const gen = initialGeneratorState(id);
+      if (id === makeGeneratorId(1, 1)) return { ...gen, everOwned: true };
+      return gen;
+    }),
     claimedMissions: [],
     rank: 1,
     cards: {},

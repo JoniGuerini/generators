@@ -4,7 +4,7 @@ import { formatNumber, formatTime } from "@/utils/format";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { getCurrentMilestoneCount, getCoinsFromClaiming } from "@/utils/milestones";
 import { getMilestoneRewardMultiplier } from "@/engine/upgrades";
-import { parseGeneratorId } from "@/engine/constants";
+import { parseGeneratorId, getLineColor, LINE_COLOR_CLASSES } from "@/engine/constants";
 import { useT } from "@/locale";
 
 interface OfflineWelcomeCardProps {
@@ -13,7 +13,9 @@ interface OfflineWelcomeCardProps {
 }
 
 function hasAnyGain(gains: OfflineGains): boolean {
-  if (gains.baseResource.gt(Decimal.dZero)) return true;
+  for (const v of Object.values(gains.lineResources)) {
+    if ((v as Decimal).gt(Decimal.dZero)) return true;
+  }
   if (gains.ticketCurrency.gt(Decimal.dZero)) return true;
   return false;
 }
@@ -41,6 +43,10 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
   const hasPending = totalPending.gt(Decimal.dZero);
 
   if (!showCard) return null;
+
+  const lineResourceEntries = Object.entries(gains.lineResources)
+    .filter(([, v]) => (v as Decimal).gt(Decimal.dZero))
+    .map(([k, v]) => ({ line: Number(k), amount: v as Decimal }));
 
   return (
     <div
@@ -70,17 +76,23 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
             {t.offline.offlineGains}
           </p>
           <div className="space-y-2">
-            {gains.baseResource.gt(Decimal.dZero) && (
-              <div className="flex flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-cyan-400 text-xs" aria-hidden>●</span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{t.offline.resource}</span>
+            {lineResourceEntries.map(({ line, amount }) => {
+              const color = getLineColor(line);
+              const classes = LINE_COLOR_CLASSES[color];
+              return (
+                <div key={line} className="flex flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs ${classes.text}`} aria-hidden>●</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                      {t.offline.resource} {line}
+                    </span>
+                  </div>
+                  <span className="text-lg font-bold tabular-nums text-white">
+                    +{formatNumber(amount)}
+                  </span>
                 </div>
-                <span className="text-lg font-bold tabular-nums text-white">
-                  +{formatNumber(gains.baseResource)}
-                </span>
-              </div>
-            )}
+              );
+            })}
             {gains.ticketCurrency.gt(Decimal.dZero) && (
               <div className="flex flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                 <div className="flex items-center gap-1.5">

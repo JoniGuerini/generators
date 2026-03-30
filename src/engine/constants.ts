@@ -119,15 +119,15 @@ export function getLineColor(line: number): LineColor {
   return LINE_COLORS[(line - 1) % LINE_COLORS.length];
 }
 
-export const LINE_COLOR_CLASSES: Record<LineColor, { bg: string; btn3d: string }> = {
-  red:    { bg: "bg-red-600",    btn3d: "btn-3d--red" },
-  blue:   { bg: "bg-blue-600",   btn3d: "btn-3d--blue" },
-  green:  { bg: "bg-green-600",  btn3d: "btn-3d--green-badge" },
-  amber:  { bg: "bg-amber-500",  btn3d: "btn-3d--amber" },
-  violet: { bg: "bg-violet-600", btn3d: "btn-3d--violet" },
-  cyan:   { bg: "bg-cyan-600",   btn3d: "btn-3d--cyan" },
-  orange: { bg: "bg-orange-500", btn3d: "btn-3d--orange" },
-  pink:   { bg: "bg-pink-600",   btn3d: "btn-3d--pink" },
-  indigo: { bg: "bg-indigo-600", btn3d: "btn-3d--indigo" },
-  lime:   { bg: "bg-lime-600",   btn3d: "btn-3d--lime" },
+export const LINE_COLOR_CLASSES: Record<LineColor, { bg: string; btn3d: string; text: string; textDark: string }> = {
+  red:    { bg: "bg-red-600",    btn3d: "btn-3d--red",    text: "text-red-400",    textDark: "text-red-700" },
+  blue:   { bg: "bg-blue-600",   btn3d: "btn-3d--blue",   text: "text-blue-400",   textDark: "text-blue-700" },
+  green:  { bg: "bg-green-600",  btn3d: "btn-3d--green-badge", text: "text-green-400", textDark: "text-green-700" },
+  amber:  { bg: "bg-amber-500",  btn3d: "btn-3d--amber",  text: "text-amber-400",  textDark: "text-amber-700" },
+  violet: { bg: "bg-violet-600", btn3d: "btn-3d--violet", text: "text-violet-400", textDark: "text-violet-700" },
+  cyan:   { bg: "bg-cyan-600",   btn3d: "btn-3d--cyan",   text: "text-cyan-400",   textDark: "text-cyan-700" },
+  orange: { bg: "bg-orange-500", btn3d: "btn-3d--orange", text: "text-orange-400", textDark: "text-orange-700" },
+  pink:   { bg: "bg-pink-600",   btn3d: "btn-3d--pink",   text: "text-pink-400",   textDark: "text-pink-700" },
+  indigo: { bg: "bg-indigo-600", btn3d: "btn-3d--indigo", text: "text-indigo-400", textDark: "text-indigo-700" },
+  lime:   { bg: "bg-lime-600",   btn3d: "btn-3d--lime",   text: "text-lime-400",   textDark: "text-lime-700" },
 };

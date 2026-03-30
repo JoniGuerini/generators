@@ -8,7 +8,6 @@ import { formatNumber } from "@/utils/format";
 import { useT } from "@/locale";
 import { LINE_COUNT, LINE_COLOR_CLASSES, getLineColor, parseGeneratorId } from "@/engine/constants";
 import { GeneratorRow } from "./GeneratorRow";
-import { MissionCard } from "./MissionCard";
 
 function LineSelector() {
   const dispatch = useGameDispatch();
@@ -65,22 +64,31 @@ export function GeneratorList() {
 
   const hasPending = totalPending.gt(Decimal.dZero);
 
+  const lineResource = useGameSelector(
+    (s) => s.lineResources[activeLine] ?? Decimal.dZero,
+    (a, b) => a.equals(b)
+  );
+
   const stats: LineStats = useGameSelector(
     (s) => s.lineStats[activeLine] ?? { baseResourceProduced: Decimal.dZero, milestoneCurrencyEarned: Decimal.dZero },
     (a, b) => a.baseResourceProduced.equals(b.baseResourceProduced) && a.milestoneCurrencyEarned.equals(b.milestoneCurrencyEarned)
   );
 
+  const lineColor = getLineColor(activeLine);
+  const colorClasses = LINE_COLOR_CLASSES[lineColor];
+
   return (
     <div className="flex min-w-0 flex-col gap-3 pt-2.5">
-      <MissionCard />
       <LineSelector />
-      <div className="flex items-center gap-3 rounded-lg bg-zinc-900/70 px-3 py-1.5 text-xs tabular-nums">
-        <span className="text-zinc-500">
-          <span className="text-cyan-400">●</span> {formatNumber(stats.baseResourceProduced)}
-        </span>
-        <span className="text-zinc-500">
-          <span className="text-violet-400">◆</span> {formatNumber(stats.milestoneCurrencyEarned)}
-        </span>
+      <div className="flex items-center gap-3 rounded-lg bg-zinc-900/70 px-3 py-1.5">
+        <div className="flex items-center gap-1.5">
+          <span className={`text-xs ${colorClasses.text}`} aria-hidden>●</span>
+          <span className="text-lg font-bold tabular-nums text-white">{formatNumber(lineResource)}</span>
+        </div>
+        <div className="ml-auto flex items-center gap-3 text-xs tabular-nums text-zinc-500">
+          <span><span className={colorClasses.text}>●</span> {formatNumber(stats.baseResourceProduced)}</span>
+          <span><span className="text-violet-400">◆</span> {formatNumber(stats.milestoneCurrencyEarned)}</span>
+        </div>
       </div>
       <ul className="flex min-w-0 flex-col gap-3">
         {visibleIds.map((id) => (

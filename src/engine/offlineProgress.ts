@@ -1,6 +1,7 @@
 import Decimal from "break_eternity.js";
 import type { GameState } from "@/store/gameState";
-import { GENERATOR_DEFS } from "@/engine/constants";
+import { getTotalTicketTrades } from "@/store/gameState";
+import { GENERATOR_DEFS, parseGeneratorId } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import { advanceMilestoneTargetIndex } from "@/utils/milestones";
 import {
@@ -11,24 +12,15 @@ import {
   getCritMultiplier,
 } from "@/engine/upgrades";
 
-/** Mínimo de tempo ausente (em ms) para mostrar o card de boas-vindas (5 segundos). */
 export const MIN_OFFLINE_MS = 5 * 1000;
 
 export interface OfflineGains {
-  /** Recurso base gerado (●). */
-  baseResource: Decimal;
-  /** Tickets gerados (▲). */
+  lineResources: Record<number, Decimal>;
   ticketCurrency: Decimal;
-  /** Ganho por gerador (só entradas com quantidade > 0). */
   generators: { id: GeneratorId; quantity: Decimal }[];
-  /** Tempo offline em ms. */
   offlineTimeMs: number;
 }
 
-/**
- * Simula a progressão do jogo por um período offline e retorna o novo estado
- * e os ganhos para exibição no card de boas-vindas.
- */
 export function simulateOfflineProgress(
   state: GameState,
   offlineMs: number,
@@ -37,7 +29,7 @@ export function simulateOfflineProgress(
   const deltaMs = Math.max(0, offlineMs);
   const deltaSec = deltaMs / 1000;
 
-  let baseResource = Decimal.fromDecimal(state.baseResource);
+  const lineResourceDeltas = new Map<number, Decimal>();
   const deltas = new Map<GeneratorId, Decimal>();
 
   const updatedGenerators = state.generators.map((gen) => {
@@ -64,7 +56,8 @@ export function simulateOfflineProgress(
       const avgMultiplier = 1 + critChance * (critMult - 1);
       const produced = productionPerCycle.mul(gen.quantity).mul(cyclesCompleted).mul(avgMultiplier);
       if (def.produces === "base") {
-        baseResource = baseResource.add(produced);
+        const ln = parseGeneratorId(gen.id).line;
+        lineResourceDeltas.set(ln, (lineResourceDeltas.get(ln) ?? Decimal.dZero).add(produced));
       } else {
         const prev = deltas.get(def.produces) ?? Decimal.dZero;
         deltas.set(def.produces, prev.add(produced));
@@ -82,7 +75,7 @@ export function simulateOfflineProgress(
   let ticketAccumulator = state.ticketAccumulator;
   if (hasAnyGenerator) {
     const ticketsPerSec = getTicketsPerSecond(
-      state.ticketTradeMilestoneCount,
+      getTotalTicketTrades(state),
       state.upgradeTicketMultiplierRank
     );
     const acc = ticketAccumulator + deltaSec;
@@ -109,16 +102,25 @@ export function simulateOfflineProgress(
     ),
   }));
 
+  const lineResources = { ...state.lineResources };
+  for (const [ln, delta] of lineResourceDeltas) {
+    lineResources[ln] = (lineResources[ln] ?? Decimal.dZero).add(delta);
+  }
+
   const newState: GameState = {
     ...state,
-    baseResource,
+    lineResources,
     ticketCurrency,
     ticketAccumulator,
     generators: withTargets,
     lastUpdateTimestamp: now,
   };
 
-  const baseResourceGain = baseResource.sub(state.baseResource);
+  const lineResourceGains: Record<number, Decimal> = {};
+  for (const [ln, delta] of lineResourceDeltas) {
+    lineResourceGains[ln] = delta;
+  }
+
   const ticketGain = ticketCurrency.sub(state.ticketCurrency);
   const generatorsGain = state.generators
     .map((g, i) => ({
@@ -128,7 +130,7 @@ export function simulateOfflineProgress(
     .filter((x) => x.quantity.gt(Decimal.dZero));
 
   const gains: OfflineGains = {
-    baseResource: baseResourceGain,
+    lineResources: lineResourceGains,
     ticketCurrency: ticketGain,
     generators: generatorsGain,
     offlineTimeMs: deltaMs,

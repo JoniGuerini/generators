@@ -31,17 +31,17 @@ export function BottomMenu({ currentView, onNavigate, options, dispatch }: Botto
           <>
             <button
               type="button"
-              onClick={() => onNavigate("missions")}
-              className="btn-3d btn-3d--zinc flex h-[40px] w-[120px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
-            >
-              {t.footer.missions}
-            </button>
-            <button
-              type="button"
               onClick={() => onNavigate("upgrades")}
               className="btn-3d btn-3d--zinc flex h-[40px] w-[120px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
             >
               {t.footer.upgrades}
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate("trades")}
+              className="btn-3d btn-3d--zinc flex h-[40px] w-[120px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
+            >
+              {t.footer.trades}
             </button>
           </>
         )}

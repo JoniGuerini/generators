@@ -1,5 +1,5 @@
 import Decimal from "break_eternity.js";
-import { GENERATOR_IDS, getLineGeneratorIds, makeGeneratorId, type GeneratorId } from "@/engine/constants";
+import { GENERATOR_IDS, getLineGeneratorIds, parseGeneratorId, LINE_COUNT, type GeneratorId } from "@/engine/constants";
 
 export interface GeneratorState {
   id: GeneratorId;
@@ -22,18 +22,15 @@ export interface LineStats {
 }
 
 export interface GameState {
-  baseResource: Decimal;
+  lineResources: Record<number, Decimal>;
   ticketCurrency: Decimal;
   ticketAccumulator: number;
   milestoneCurrency: Decimal;
-  ticketTradeMilestoneCount: number;
+  lineTicketTradeCounts: Record<number, number>;
   upgradeTicketMultiplierRank: number;
   upgradeGeneratorCostHalfRank: number;
   upgradeMilestoneDoublerRank: number;
   generators: GeneratorState[];
-  claimedMissions: string[];
-  rank: number;
-  cards: Record<string, number>;
   activeLine: number;
   lineStats: Record<number, LineStats>;
   lastUpdateTimestamp: number;
@@ -66,6 +63,14 @@ function initialGeneratorState(id: GeneratorId): GeneratorState {
   };
 }
 
+export function getTotalTicketTrades(state: GameState): number {
+  return Object.values(state.lineTicketTradeCounts).reduce((sum, c) => sum + c, 0);
+}
+
+export function getLineResource(state: GameState, line: number): Decimal {
+  return state.lineResources[line] ?? Decimal.dZero;
+}
+
 export function getVisibleGeneratorIds(state: GameState, line?: number): GeneratorId[] {
   const targetLine = line ?? state.activeLine;
   const lineIds = getLineGeneratorIds(targetLine);
@@ -84,22 +89,23 @@ export function getVisibleGeneratorIds(state: GameState, line?: number): Generat
 
 export function getInitialState(): GameState {
   return {
-    baseResource: Decimal.dZero,
+    lineResources: Object.fromEntries(
+      Array.from({ length: LINE_COUNT }, (_, i) => [i + 1, Decimal.dZero])
+    ),
     ticketCurrency: Decimal.dOne,
     ticketAccumulator: 0,
     milestoneCurrency: ZERO,
-    ticketTradeMilestoneCount: 0,
+    lineTicketTradeCounts: Object.fromEntries(
+      Array.from({ length: LINE_COUNT }, (_, i) => [i + 1, 0])
+    ),
     upgradeTicketMultiplierRank: 0,
     upgradeGeneratorCostHalfRank: 0,
     upgradeMilestoneDoublerRank: 0,
     generators: GENERATOR_IDS.map((id) => {
       const gen = initialGeneratorState(id);
-      if (id === makeGeneratorId(1, 1)) return { ...gen, everOwned: true };
+      if (parseGeneratorId(id).gen === 1) return { ...gen, everOwned: true };
       return gen;
     }),
-    claimedMissions: [],
-    rank: 1,
-    cards: {},
     activeLine: 1,
     lineStats: {},
     lastUpdateTimestamp: Date.now(),

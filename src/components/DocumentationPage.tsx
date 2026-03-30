@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useT } from "@/locale";
 
-type DocsTab = "basics" | "currencies" | "generators" | "upgrades" | "cards";
+type DocsTab = "basics" | "currencies" | "generators" | "upgrades";
 
 function H({ html }: { html: string }) {
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
@@ -141,84 +141,6 @@ function UpgradesTab() {
   );
 }
 
-function CardsTab() {
-  const t = useT();
-  return (
-    <div className="space-y-4">
-      <p><H html={t.docs.cardsIntro} /></p>
-
-      <Card>
-        <h3 className="mb-2 text-lg font-semibold text-zinc-200">{t.docs.cardsHowTitle}</h3>
-        <p className="text-sm text-zinc-400"><H html={t.docs.cardsHowDesc} /></p>
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-lg font-semibold text-zinc-200">{t.docs.cardsNeededTitle}</h3>
-        <p className="mb-2 text-sm text-zinc-400"><H html={t.docs.cardsNeededDesc} /></p>
-        <div className="overflow-hidden rounded border border-zinc-600">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-zinc-800 text-xs uppercase text-zinc-400">
-              <tr>
-                <th className="px-3 py-2">{t.docs.cardsTableRank}</th>
-                <th className="px-3 py-2">{t.docs.cardsTableNeeded}</th>
-              </tr>
-            </thead>
-            <tbody className="bg-zinc-800/60 text-zinc-300">
-              <tr className="border-t border-zinc-600"><td className="px-3 py-1.5">0 → 1</td><td className="px-3 py-1.5">2</td></tr>
-              <tr className="border-t border-zinc-600"><td className="px-3 py-1.5">1 → 2</td><td className="px-3 py-1.5">4</td></tr>
-              <tr className="border-t border-zinc-600"><td className="px-3 py-1.5">2 → 3</td><td className="px-3 py-1.5">8</td></tr>
-              <tr className="border-t border-zinc-600"><td className="px-3 py-1.5">3 → 4</td><td className="px-3 py-1.5">16</td></tr>
-              <tr className="border-t border-zinc-600"><td className="px-3 py-1.5">N → N+1</td><td className="px-3 py-1.5">2^(N+1)</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-lg font-semibold text-zinc-200">{t.docs.cardsRarityTitle}</h3>
-        <p className="mb-2 text-sm text-zinc-400"><H html={t.docs.cardsRarityDesc} /></p>
-        <div className="overflow-hidden rounded border border-zinc-600">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-zinc-800 text-xs uppercase text-zinc-400">
-              <tr>
-                <th className="px-3 py-2">{t.docs.cardsTableRarity}</th>
-                <th className="px-3 py-2">{t.docs.cardsTableChance}</th>
-                <th className="px-3 py-2">{t.docs.cardsTableTypes}</th>
-              </tr>
-            </thead>
-            <tbody className="bg-zinc-800/60">
-              <tr className="border-t border-zinc-600 text-zinc-400">
-                <td className="px-3 py-1.5 font-semibold text-zinc-300">{t.docs.cardsCommon}</td>
-                <td className="px-3 py-1.5">80%</td>
-                <td className="px-3 py-1.5">{t.docs.cardsCommonTypes}</td>
-              </tr>
-              <tr className="border-t border-zinc-600 text-zinc-400">
-                <td className="px-3 py-1.5 font-semibold text-green-400">{t.docs.cardsUncommon}</td>
-                <td className="px-3 py-1.5">15%</td>
-                <td className="px-3 py-1.5">{t.docs.cardsUncommonTypes}</td>
-              </tr>
-              <tr className="border-t border-zinc-600 text-zinc-400">
-                <td className="px-3 py-1.5 font-semibold text-violet-400">{t.docs.cardsRare}</td>
-                <td className="px-3 py-1.5">5%</td>
-                <td className="px-3 py-1.5">{t.docs.cardsRareTypes}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card>
-        <h3 className="mb-2 text-lg font-semibold text-zinc-200">{t.docs.cardsRulesTitle}</h3>
-        <ul className="list-inside list-disc space-y-1 pl-2 text-sm text-zinc-400">
-          <li>{t.docs.cardsRule1}</li>
-          <li>{t.docs.cardsRule2}</li>
-          <li>{t.docs.cardsRule3}</li>
-        </ul>
-      </Card>
-    </div>
-  );
-}
-
 export function DocumentationPage() {
   const t = useT();
   const [tab, setTab] = useState<DocsTab>("basics");
@@ -232,7 +154,6 @@ export function DocumentationPage() {
           <TabButton active={tab === "currencies"} label={t.docs.tabCurrencies} onClick={() => setTab("currencies")} />
           <TabButton active={tab === "generators"} label={t.docs.tabGenerators} onClick={() => setTab("generators")} />
           <TabButton active={tab === "upgrades"} label={t.docs.tabUpgrades} onClick={() => setTab("upgrades")} />
-          <TabButton active={tab === "cards"} label={t.docs.tabCards} onClick={() => setTab("cards")} />
         </div>
       </div>
 
@@ -241,7 +162,6 @@ export function DocumentationPage() {
         {tab === "currencies" && <CurrenciesTab />}
         {tab === "generators" && <GeneratorsTab />}
         {tab === "upgrades" && <UpgradesTab />}
-        {tab === "cards" && <CardsTab />}
       </div>
     </div>
   );

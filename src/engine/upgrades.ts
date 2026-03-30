@@ -47,19 +47,33 @@ export function getTicketTradeThreshold(index: number): Decimal {
   return Decimal.fromNumber(5).mul(Decimal.pow(Decimal.fromNumber(10), exp));
 }
 
-/** Produção base de ▲/s = 1 + trocas de recurso base. */
-function getTicketProductionBase(
-  ticketTradeMilestoneCount: number
-): number {
-  return 1 + Math.max(0, ticketTradeMilestoneCount);
+export function getMaxAffordableTrades(currentCount: number, resource: Decimal): { trades: number; totalCost: Decimal } {
+  let remaining = resource;
+  let trades = 0;
+  let count = currentCount;
+  let totalCost = Decimal.dZero;
+  while (true) {
+    const cost = getTicketTradeThreshold(count);
+    if (remaining.lt(cost)) break;
+    remaining = remaining.sub(cost);
+    totalCost = totalCost.add(cost);
+    trades++;
+    count++;
+  }
+  return { trades, totalCost };
 }
 
-/** Tickets por segundo = produção base × 2^multiplierRank (a melhoria "dobrar" multiplica a base). */
+/** Produção base de ▲/s = 1 + soma de trocas de todas as linhas. */
+function getTicketProductionBase(totalTrades: number): number {
+  return 1 + Math.max(0, totalTrades);
+}
+
+/** Tickets por segundo = produção base × 2^multiplierRank. */
 export function getTicketsPerSecond(
-  ticketTradeMilestoneCount: number = 0,
+  totalTrades: number = 0,
   upgradeTicketMultiplierRank: number = 0
 ): number {
-  const base = getTicketProductionBase(ticketTradeMilestoneCount);
+  const base = getTicketProductionBase(totalTrades);
   const mult = 2 ** Math.max(0, upgradeTicketMultiplierRank);
   return base * mult;
 }

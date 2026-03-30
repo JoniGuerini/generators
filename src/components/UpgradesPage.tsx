@@ -1,10 +1,9 @@
 import { useState } from "react";
 import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
+import { getTotalTicketTrades } from "@/store/gameState";
 import { GENERATOR_DEFS, parseGeneratorId, getLineColor, LINE_COLOR_CLASSES, LINE_COUNT } from "@/engine/constants";
 import { useT } from "@/locale";
-import { getCardKey, getCardsNeeded, CARD_RARITY } from "@/engine/cards";
-import type { CardRarity } from "@/engine/cards";
 import {
   getEffectiveCycleTimeSeconds,
   getEffectiveProductionPerCycle,
@@ -14,7 +13,6 @@ import {
   getUpgradeCostGeneratorCostHalf,
   getTicketsPerSecond,
   getUpgradeCostTicketMultiplier,
-  getTicketTradeThreshold,
   getUpgradeCostMilestoneDoubler,
   getMilestoneRewardMultiplier,
   getCritChance,
@@ -51,9 +49,6 @@ function UpgradeRow({
   holdTitle,
   progress,
   progressColor = "bg-cyan-600",
-  cardCount,
-  cardsNeeded,
-  cardRarity,
 }: {
   label: React.ReactNode;
   sublabel?: string;
@@ -69,18 +64,13 @@ function UpgradeRow({
   holdTitle?: string;
   progress?: number;
   progressColor?: string;
-  cardCount?: number;
-  cardsNeeded?: number;
-  cardRarity?: CardRarity;
 }) {
   const rowWidth = width || "18.5rem";
   const buttonActiveClass =
     buttonVariant === "base"
       ? "btn-3d btn-3d--cyan bg-cyan-600 text-white hover:bg-cyan-500"
       : "btn-3d btn-3d--violet bg-violet-600 text-white hover:bg-violet-500";
-  const hasCards = cardsNeeded != null;
-  const enoughCards = !hasCards || (cardCount ?? 0) >= cardsNeeded!;
-  const effectiveCanBuy = canBuy && enoughCards;
+  const effectiveCanBuy = canBuy;
   const hold = useHoldToRepeat(onBuy);
   const hasProgress = progress != null;
   const pct = hasProgress ? Math.min(progress * 100, 100) : 0;
@@ -93,41 +83,6 @@ function UpgradeRow({
       <div className="flex min-w-0 flex-1 flex-col justify-center">
         <span className="text-sm text-zinc-300">{label}</span>
       </div>
-      {hasCards && !maxed && (() => {
-        const owned = cardCount ?? 0;
-        const needed = cardsNeeded!;
-        const pctCards = needed > 0 ? Math.min((owned / needed) * 100, 100) : 0;
-        const full = owned >= needed;
-        const fillColor = cardRarity === "rare"
-          ? "bg-violet-500"
-          : cardRarity === "uncommon"
-            ? "bg-green-500"
-            : "bg-zinc-400";
-        const textColor = cardRarity === "rare"
-          ? "text-violet-300"
-          : cardRarity === "uncommon"
-            ? "text-green-300"
-            : "text-zinc-300";
-        const glowClass = full
-          ? cardRarity === "rare"
-            ? "ring-1 ring-violet-500/50"
-            : cardRarity === "uncommon"
-              ? "ring-1 ring-green-500/50"
-              : "ring-1 ring-zinc-400/50"
-          : "";
-        return (
-          <div className={`relative flex h-6 w-12 shrink-0 items-center justify-center overflow-hidden rounded ${glowClass}`}>
-            <div className="absolute inset-0 bg-zinc-800" />
-            <div
-              className={`absolute inset-y-0 left-0 ${fillColor} transition-[width] duration-300`}
-              style={{ width: `${pctCards}%` }}
-            />
-            <span className={`relative z-10 text-[10px] font-bold tabular-nums drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${full ? "text-white" : textColor}`}>
-              {owned}/{needed}
-            </span>
-          </div>
-        );
-      })()}
       {sublabel && (
         <span className="shrink-0 rounded bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-zinc-500">
           {sublabel}
@@ -195,13 +150,11 @@ export function UpgradesPage() {
   const {
     generatorIdsForUpgrades,
     milestoneCurrency,
-    baseResource,
-    ticketTradeMilestoneCount,
+    totalTicketTrades,
     upgradeTicketMultiplierRank,
     upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank,
     generatorsData,
-    cards,
   } = useGameSelector((state) => {
     const everOwnedIds = state.generators
       .filter(g => g.everOwned)
@@ -217,23 +170,20 @@ export function UpgradesPage() {
     return {
       generatorIdsForUpgrades: everOwnedIds,
       milestoneCurrency: state.milestoneCurrency,
-      baseResource: state.baseResource,
-      ticketTradeMilestoneCount: state.ticketTradeMilestoneCount,
+      totalTicketTrades: getTotalTicketTrades(state),
       upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank,
       upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
       upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
       generatorsData,
-      cards: state.cards,
     };
   }, (a, b) => 
     a.milestoneCurrency.equals(b.milestoneCurrency) &&
-    a.baseResource.equals(b.baseResource) &&
-    a.ticketTradeMilestoneCount === b.ticketTradeMilestoneCount &&
+    a.totalTicketTrades === b.totalTicketTrades &&
     a.upgradeTicketMultiplierRank === b.upgradeTicketMultiplierRank &&
     a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
     a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
     a.generatorIdsForUpgrades.join() === b.generatorIdsForUpgrades.join() &&
-    a.cards === b.cards &&
+   
     a.generatorsData.length === b.generatorsData.length &&
     a.generatorsData.every((g, i) => 
       g.upgradeCycleSpeedRank === b.generatorsData[i].upgradeCycleSpeedRank && 
@@ -247,23 +197,11 @@ export function UpgradesPage() {
     id => parseGeneratorId(id).line === upgradeLine
   );
 
-  const ticketsPerSec = getTicketsPerSecond(
-    ticketTradeMilestoneCount,
-    upgradeTicketMultiplierRank
-  );
-  const nextTicketsMultiplier = getTicketsPerSecond(
-    ticketTradeMilestoneCount,
-    upgradeTicketMultiplierRank + 1
-  );
-  const nextTicketsTrade = getTicketsPerSecond(
-    ticketTradeMilestoneCount + 1,
-    upgradeTicketMultiplierRank
-  );
+  const ticketsPerSec = getTicketsPerSecond(totalTicketTrades, upgradeTicketMultiplierRank);
+  const nextTicketsMultiplier = getTicketsPerSecond(totalTicketTrades, upgradeTicketMultiplierRank + 1);
 
   const costTicketMultiplier = getUpgradeCostTicketMultiplier(upgradeTicketMultiplierRank);
   const canBuyTicketMultiplier = milestoneCurrency.gte(costTicketMultiplier);
-  const tradeCost = getTicketTradeThreshold(ticketTradeMilestoneCount);
-  const canTrade = baseResource.gte(tradeCost);
 
   const tabs: { key: UpgradesTab; label: string }[] = [
     { key: "geral", label: t.upgradesPage.general },
@@ -337,9 +275,6 @@ export function UpgradesPage() {
                       dispatch({ type: "BUY_GENERATOR_COST_HALF_UPGRADE" })
                     }
                     buttonLabel={`◆ ${formatNumber(costHalf)}`}
-                    cardCount={cards[getCardKey("generatorCostHalf")] ?? 0}
-                    cardsNeeded={getCardsNeeded(rank)}
-                    cardRarity={CARD_RARITY.generatorCostHalf}
                   />
                 );
               })()}
@@ -373,9 +308,6 @@ export function UpgradesPage() {
                       dispatch({ type: "BUY_MILESTONE_DOUBLER_UPGRADE" })
                     }
                     buttonLabel={`◆ ${formatNumber(costDoubler)}`}
-                    cardCount={cards[getCardKey("milestoneDoubler")] ?? 0}
-                    cardsNeeded={getCardsNeeded(rank)}
-                    cardRarity={CARD_RARITY.milestoneDoubler}
                   />
                 );
               })()}
@@ -405,34 +337,6 @@ export function UpgradesPage() {
                 canBuy={canBuyTicketMultiplier}
                 onBuy={() => dispatch({ type: "BUY_TICKET_MULTIPLIER_UPGRADE" })}
                 buttonLabel={`◆ ${formatNumber(costTicketMultiplier)}`}
-                cardCount={cards[getCardKey("ticketMultiplier")] ?? 0}
-                cardsNeeded={getCardsNeeded(upgradeTicketMultiplierRank)}
-                cardRarity={CARD_RARITY.ticketMultiplier}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/20 text-lg text-cyan-400" aria-hidden>●</div>
-              <UpgradeRow
-                flexible
-                label={
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.tradeForTickets}</span>
-                    <div className="flex items-center gap-1.5 text-sm font-medium">
-                      <span className="text-zinc-400">{formatNumber(Decimal.fromNumber(ticketsPerSec))}</span>
-                      <span className="text-amber-400/80">→</span>
-                      <span className="text-white">{formatNumber(Decimal.fromNumber(nextTicketsTrade))}</span>
-                      <span className="text-amber-500/60 text-[10px]">▲/s</span>
-                    </div>
-                  </div>
-                }
-                sublabel={`${ticketTradeMilestoneCount}`}
-                cost={`● ${formatNumber(tradeCost)}`}
-                canBuy={canTrade}
-                onBuy={() => dispatch({ type: "TRADE_BASE_FOR_TICKET_RATE" })}
-                buttonLabel="+1 ▲/s"
-                buttonVariant="base"
-                progress={tradeCost.gt(0) ? baseResource.div(tradeCost).toNumber() : 0}
-                progressColor="bg-cyan-500"
               />
             </div>
           </div>
@@ -493,9 +397,6 @@ export function UpgradesPage() {
                       buttonLabel={costCycle ? `◆ ${formatNumber(costCycle)}` : "—"}
                       maxed={cycleRank >= maxCycleRank}
                       maxedLabel={t.upgradesPage.maxed}
-                      cardCount={cards[getCardKey("cycleSpeed", id)] ?? 0}
-                      cardsNeeded={getCardsNeeded(cycleRank)}
-                      cardRarity={CARD_RARITY.cycleSpeed}
                     />
                     <UpgradeRow
                       flexible
@@ -514,9 +415,6 @@ export function UpgradesPage() {
                       canBuy={canBuyProd}
                       onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "production" })}
                       buttonLabel={`◆ ${formatNumber(costProd)}`}
-                      cardCount={cards[getCardKey("production", id)] ?? 0}
-                      cardsNeeded={getCardsNeeded(prodRank)}
-                      cardRarity={CARD_RARITY.production}
                     />
                     {(() => {
                       const critRank = gen.upgradeCritChanceRank;
@@ -556,9 +454,6 @@ export function UpgradesPage() {
                             buttonLabel={costCrit ? `◆ ${formatNumber(costCrit)}` : "—"}
                             maxed={critRank >= MAX_CRIT_CHANCE_RANK}
                             maxedLabel={t.upgradesPage.maxed}
-                            cardCount={cards[getCardKey("critChance", id)] ?? 0}
-                            cardsNeeded={getCardsNeeded(critRank)}
-                            cardRarity={CARD_RARITY.critChance}
                           />
                           <UpgradeRow
                             flexible
@@ -577,9 +472,6 @@ export function UpgradesPage() {
                             canBuy={canBuyCritMult}
                             onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "critMultiplier" })}
                             buttonLabel={`◆ ${formatNumber(costCritMult)}`}
-                            cardCount={cards[getCardKey("critMultiplier", id)] ?? 0}
-                            cardsNeeded={getCardsNeeded(critMultRank)}
-                            cardRarity={CARD_RARITY.critMultiplier}
                           />
                         </>
                       );

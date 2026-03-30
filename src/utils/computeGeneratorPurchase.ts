@@ -10,16 +10,15 @@ import type { BuyMode } from "@/contexts/BuyModeContext";
  * para comprar 1 do próximo gerador (considerando upgrade de custo).
  * Retorna null se não houver próximo gerador.
  */
-export function getNextGeneratorCostInCurrent(
+export function getNextGeneratorUnlockTarget(
   id: GeneratorId,
-  upgradeGeneratorCostHalfRank: number
 ): Decimal | null {
   const { line, gen } = parseGeneratorId(id);
   if (gen >= GENERATORS_PER_LINE) return null;
   const nextId = makeGeneratorId(line, gen + 1);
   const nextDef = GENERATOR_DEFS[nextId];
-  if (!nextDef || nextDef.costPreviousGenerator.lte(Decimal.dZero)) return null;
-  return getEffectiveGeneratorCost(nextDef.costPreviousGenerator, upgradeGeneratorCostHalfRank);
+  if (!nextDef || nextDef.unlockRequirement.lte(Decimal.dZero)) return null;
+  return nextDef.unlockRequirement;
 }
 
 export function isLastGeneratorInLine(id: GeneratorId): boolean {
@@ -80,7 +79,8 @@ export function computeGeneratorPurchase(
     def.costPreviousGenerator,
     half
   );
-  const baseResource = state.baseResource;
+  const genLine = parseGeneratorId(id).line;
+  const lineResource = state.lineResources[genLine] ?? Decimal.dZero;
   const ticketCurrency = state.ticketCurrency;
   const prevGenQuantity =
     def.produces !== "base"
@@ -88,7 +88,7 @@ export function computeGeneratorPurchase(
       : undefined;
 
   const ticketCostPerUnit = parseGeneratorId(id).line;
-  const maxByBase = baseResource.div(effectiveCost).floor();
+  const maxByBase = lineResource.div(effectiveCost).floor();
   const maxByTickets = ticketCurrency.div(ticketCostPerUnit).floor();
   let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
   if (
@@ -109,10 +109,11 @@ export function computeGeneratorPurchase(
       ? Decimal.gte(prevGenQuantity, effectiveCostPrev)
       : false);
   const canBuy =
-    Decimal.gte(baseResource, effectiveCost) &&
+    Decimal.gte(lineResource, effectiveCost) &&
     Decimal.gte(ticketCurrency, Decimal.fromNumber(ticketCostPerUnit)) &&
     hasEnoughPrev &&
     (() => {
+      if (gen.everOwned) return true;
       const unlock = getUnlockRequirement(id);
       if (unlock.required.lte(Decimal.dZero)) return true;
       const uPrev = unlock.previousGenId
@@ -123,7 +124,7 @@ export function computeGeneratorPurchase(
 
   const quantity = gen.quantity;
   const nextGenCost = buyMode === "proximo"
-    ? getNextGeneratorCostInCurrent(id, half)
+    ? getNextGeneratorUnlockTarget(id)
     : null;
   const buyAmount = getBuyAmount(buyMode, maxAffordable, quantity, nextGenCost);
   const amountNeededForMarco =

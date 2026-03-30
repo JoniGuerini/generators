@@ -17,9 +17,9 @@ import { UpgradesPage } from "./UpgradesPage";
 import { OfflineWelcomeCard } from "./OfflineWelcomeCard";
 
 import { DocumentationPage } from "./DocumentationPage";
-import { MissionsPage } from "./MissionsPage";
+import { TradesPage } from "./TradesPage";
 
-export type MainView = "game" | "upgrades" | "missions" | "docs";
+export type MainView = "game" | "upgrades" | "trades" | "docs";
 
 let pendingOfflineGains: OfflineGains | null = null;
 let initialLoadTimestamp: number | null = null;
@@ -110,8 +110,8 @@ export function GameScreen() {
             </div>
           ) : view === "upgrades" ? (
             <UpgradesPage />
-          ) : view === "missions" ? (
-            <MissionsPage />
+          ) : view === "trades" ? (
+            <TradesPage />
           ) : (
             <DocumentationPage />
           )}

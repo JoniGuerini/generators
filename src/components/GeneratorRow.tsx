@@ -19,7 +19,7 @@ import {
   getNextMilestoneFromQuantity,
   getCoinsFromClaiming,
 } from "@/utils/milestones";
-import { getBuyAmount, getNextGeneratorCostInCurrent, isLastGeneratorInLine } from "@/utils/computeGeneratorPurchase";
+import { getBuyAmount, getNextGeneratorUnlockTarget, isLastGeneratorInLine } from "@/utils/computeGeneratorPurchase";
 import { useHoldToBuyGenerator } from "@/hooks/useHoldToBuyGenerator";
 import { useT } from "@/locale";
 
@@ -53,7 +53,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const t = useT();
   const {
     gen,
-    baseResource,
+    lineResource,
     ticketCurrency,
     upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank,
@@ -66,7 +66,8 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     const generator = state.generators.find((g) => g.id === id);
     if (!generator) return { gen: null } as any;
 
-    const baseResource = state.baseResource;
+    const genLine = parseGeneratorId(id).line;
+    const lineResource = state.lineResources[genLine] ?? Decimal.dZero;
     const ticketCurrency = state.ticketCurrency;
     const upgradeGeneratorCostHalfRank = state.upgradeGeneratorCostHalfRank;
     const prevGenQuantity = def.produces !== "base" 
@@ -78,7 +79,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
 
     // Calc max affordable
     const ticketCostPerUnit = parseGeneratorId(id).line;
-    const maxByBase = baseResource.div(effectiveCost).floor();
+    const maxByBase = lineResource.div(effectiveCost).floor();
     const maxByTickets = ticketCurrency.div(ticketCostPerUnit).floor();
     let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
     if (effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base" && prevGenQuantity) {
@@ -95,13 +96,13 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     const unlockPrevQty = unlock.previousGenId
       ? state.generators.find((g) => g.id === unlock.previousGenId)?.quantity ?? Decimal.dZero
       : Decimal.dZero;
-    const isUnlocked = unlock.required.lte(Decimal.dZero) || unlockPrevQty.gte(unlock.required);
+    const isUnlocked = generator.everOwned || unlock.required.lte(Decimal.dZero) || unlockPrevQty.gte(unlock.required);
 
-    const canBuy = isUnlocked && Decimal.gte(baseResource, effectiveCost) && Decimal.gte(ticketCurrency, Decimal.fromNumber(ticketCostPerUnit)) && hasEnoughPrev;
+    const canBuy = isUnlocked && Decimal.gte(lineResource, effectiveCost) && Decimal.gte(ticketCurrency, Decimal.fromNumber(ticketCostPerUnit)) && hasEnoughPrev;
 
     return {
       gen: generator,
-      baseResource,
+      lineResource,
       ticketCurrency,
       upgradeGeneratorCostHalfRank,
       upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
@@ -115,7 +116,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     if (!a.gen || !b.gen) return a.gen === b.gen;
     return (
       genEqualIgnoreCycleProgress(a.gen, b.gen) &&
-      a.baseResource.equals(b.baseResource) &&
+      a.lineResource.equals(b.lineResource) &&
       a.ticketCurrency.equals(b.ticketCurrency) &&
       a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
       a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
@@ -200,7 +201,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     cycleTimeSec > 0 ? producedPerCycle.div(cycleTimeSec) : Decimal.dZero;
   const isLastGenerator = isLastGeneratorInLine(id);
   const nextGenCost = buyMode === "proximo"
-    ? getNextGeneratorCostInCurrent(id, upgradeGeneratorCostHalfRank)
+    ? getNextGeneratorUnlockTarget(id)
     : null;
   const buyAmount = getBuyAmount(buyMode, maxAffordable, quantity, nextGenCost);
   const amountNeededForMarco =
@@ -251,7 +252,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const hasPrevCost = effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base";
   const ticketCostPerUnit = parseGeneratorId(id).line;
   const ticketsRequired = (amountForDisplay >= 1 ? amountForDisplay : 1) * ticketCostPerUnit;
-  const lacksBase = baseResource.lt(displayCost);
+  const lacksBase = lineResource.lt(displayCost);
   const lacksTickets = ticketCurrency.lt(Decimal.fromNumber(ticketCostPerUnit));
   const lacksPrev = hasPrevCost && (
     prevGenQuantity
@@ -275,21 +276,11 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const unlock = getUnlockRequirement(id);
 
   if (isLocked && !isUnlocked) {
-    const pct = unlock.required.gt(Decimal.dZero)
-      ? Math.min(unlockPrevQty.div(unlock.required).toNumber() * 100, 100)
-      : 100;
     return (
-      <div className="flex h-[40px] min-w-0 flex-nowrap items-center gap-2">
-        <div
-          className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-md border-2 border-dashed border-zinc-500 bg-zinc-700/80 text-sm font-bold text-zinc-500"
-          aria-label={def.name}
-        >
-          {generatorNumber}
-        </div>
-        <div className="relative flex h-[40px] min-w-0 flex-1 items-center justify-center overflow-hidden rounded-md bg-zinc-800/60">
-          <div className="absolute inset-y-0 left-0 bg-zinc-700/50 transition-[width] duration-500" style={{ width: `${pct}%` }} />
-          <span className="relative z-10 flex items-center gap-1.5 text-center text-xs font-medium text-zinc-500">
-            <span className={`${colorClasses.btn3d} inline-flex h-4 w-4 items-center justify-center rounded ${colorClasses.bg} text-[8px] font-bold text-white`}>
+      <div className="flex h-[40px] min-w-0 flex-nowrap items-center">
+        <div className="flex h-[40px] min-w-0 flex-1 items-center justify-center rounded-md border-2 border-dashed border-zinc-600 bg-zinc-800/60">
+          <span className="flex items-center gap-1.5 text-center text-sm font-medium text-zinc-500">
+            <span className={`inline-flex h-5 w-5 items-center justify-center rounded ${colorClasses.bg} text-[9px] font-bold text-white`}>
               {unlock.previousGenId ? parseGeneratorId(unlock.previousGenId).gen : ""}
             </span>
             {formatNumber(unlockPrevQty)} / {formatNumber(unlock.required)}
@@ -344,7 +335,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                 <div className="flex flex-row items-stretch gap-2">
                   <div className="flex w-[7rem] flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-cyan-400 text-xs" aria-hidden>●</span>
+                      <span className={`${colorClasses.text} text-xs`} aria-hidden>●</span>
                       <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.resource}</span>
                     </div>
                     <span className={`truncate text-sm font-bold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>
@@ -528,7 +519,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                   {!showCycleTime && <span className="ml-0.5">/s</span>}
                 </span>
                 {def.produces === "base" ? (
-                  <span className="text-cyan-400 text-[14px] leading-none" title="recurso" aria-hidden>
+                  <span className={`${colorClasses.text} text-[14px] leading-none`} title="recurso" aria-hidden>
                     ●
                   </span>
                 ) : (
@@ -573,7 +564,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
               <div className="flex flex-row items-stretch gap-2">
                 <div className="flex w-[7rem] flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-cyan-400 text-xs" aria-hidden>●</span>
+                    <span className={`${colorClasses.text} text-xs`} aria-hidden>●</span>
                     <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.resource}</span>
                   </div>
                   <span className={`truncate text-sm font-bold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>

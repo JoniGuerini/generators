@@ -4,6 +4,7 @@ import { formatNumber, formatTime } from "@/utils/format";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { getCurrentMilestoneCount, getCoinsFromClaiming } from "@/utils/milestones";
 import { getMilestoneRewardMultiplier } from "@/engine/upgrades";
+import { parseGeneratorId } from "@/engine/constants";
 import { useT } from "@/locale";
 
 interface OfflineWelcomeCardProps {
@@ -28,7 +29,7 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
     for (const gen of state.generators) {
       const currentCount = getCurrentMilestoneCount(gen.quantity);
       if (currentCount <= gen.claimedMilestoneIndex) continue;
-      const generatorNumber = parseInt(gen.id.replace("generator", ""), 10);
+      const generatorNumber = parseGeneratorId(gen.id).gen;
       coins = coins.add(
         getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentCount)
       );

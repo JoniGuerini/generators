@@ -5,9 +5,10 @@ import { getInitialState } from "@/store/gameState";
 import { useRawGameStateForPersist } from "@/store/useGameStore";
 import { advanceMilestoneTargetIndex } from "@/utils/milestones";
 import { loadSharedSettings, saveSharedSettings } from "@/utils/sharedSettings";
+import { makeGeneratorId } from "@/engine/constants";
 
 const SAVE_KEY = "idle-game-save";
-const SAVE_VERSION = 5;
+const SAVE_VERSION = 6;
 
 interface SavedState {
   version: number;
@@ -22,6 +23,7 @@ interface SavedState {
   claimedMissions?: string[];
   rank?: number;
   cards?: Record<string, number>;
+  activeLine?: number;
   generators: {
     id: string;
     quantity: string;
@@ -39,6 +41,29 @@ interface SavedState {
   options?: { showFPS?: boolean; sfxEnabled?: boolean; sfxVolume?: number; sfxStyle?: string; locale?: string };
 }
 
+/** Migra IDs antigos "generator1" → "l1g1" */
+function migrateGeneratorId(id: string): string {
+  const match = id.match(/^generator(\d+)$/);
+  if (match) return makeGeneratorId(1, parseInt(match[1], 10));
+  return id;
+}
+
+/** Migra chaves de cartas: "cycleSpeed:generator1" → "cycleSpeed:l1g1" */
+function migrateCardKeys(cards: Record<string, number>): Record<string, number> {
+  const migrated: Record<string, number> = {};
+  for (const [key, count] of Object.entries(cards)) {
+    const colonIdx = key.indexOf(":");
+    if (colonIdx === -1) {
+      migrated[key] = count;
+    } else {
+      const type = key.slice(0, colonIdx);
+      const genId = key.slice(colonIdx + 1);
+      migrated[`${type}:${migrateGeneratorId(genId)}`] = count;
+    }
+  }
+  return migrated;
+}
+
 function serialize(state: GameState): string {
   const saved: SavedState = {
     version: SAVE_VERSION,
@@ -53,6 +78,7 @@ function serialize(state: GameState): string {
     claimedMissions: state.claimedMissions,
     rank: state.rank,
     cards: state.cards,
+    activeLine: state.activeLine,
     generators: state.generators.map((g) => ({
       id: g.id,
       quantity: g.quantity.toString(),
@@ -75,28 +101,31 @@ function serialize(state: GameState): string {
 function deserialize(raw: string): GameState | null {
   try {
     const saved = JSON.parse(raw) as SavedState;
-    if (saved.version !== SAVE_VERSION && saved.version !== 1 && saved.version !== 2 && saved.version !== 3 && saved.version !== 4) return null;
+    if (![1, 2, 3, 4, 5, 6].includes(saved.version)) return null;
     const initial = getInitialState();
     const now = Date.now();
     const shared = loadSharedSettings();
+    const needsMigration = saved.version < 6;
+
     const byId = new Map(
       saved.generators?.map((g) => {
         const q = Decimal.fromString(g.quantity);
-        const everOwned = (g as { everOwned?: boolean }).everOwned ?? q.gte(Decimal.dOne);
+        const everOwned = g.everOwned ?? q.gte(Decimal.dOne);
+        const migratedId = needsMigration ? migrateGeneratorId(g.id) : g.id;
         return [
-          g.id,
+          migratedId,
           {
-            id: g.id as GameState["generators"][0]["id"],
+            id: migratedId as GameState["generators"][0]["id"],
             quantity: q,
             everOwned,
             cycleProgress: Number(g.cycleProgress) || 0,
             cycleStartTime: Number(g.cycleStartTime) || now,
             claimedMilestoneIndex: Number(g.claimedMilestoneIndex) || 0,
             currentMilestoneTargetIndex: Number(g.currentMilestoneTargetIndex) || 0,
-            upgradeCycleSpeedRank: Number((g as SavedState["generators"][0]).upgradeCycleSpeedRank) || 0,
-            upgradeProductionRank: Number((g as SavedState["generators"][0]).upgradeProductionRank) || 0,
-            upgradeCritChanceRank: Number((g as SavedState["generators"][0]).upgradeCritChanceRank) || 0,
-            upgradeCritMultiplierRank: Number((g as SavedState["generators"][0]).upgradeCritMultiplierRank) || 0,
+            upgradeCycleSpeedRank: Number(g.upgradeCycleSpeedRank) || 0,
+            upgradeProductionRank: Number(g.upgradeProductionRank) || 0,
+            upgradeCritChanceRank: Number(g.upgradeCritChanceRank) || 0,
+            upgradeCritMultiplierRank: Number(g.upgradeCritMultiplierRank) || 0,
           },
         ];
       }) ?? []
@@ -110,12 +139,12 @@ function deserialize(raw: string): GameState | null {
         rawTarget != null && rawTarget >= 1
           ? rawTarget
           : advanceMilestoneTargetIndex(loaded.quantity, 1);
-      const upgCycle = (loaded as { upgradeCycleSpeedRank?: number }).upgradeCycleSpeedRank ?? 0;
-      const upgProd = (loaded as { upgradeProductionRank?: number }).upgradeProductionRank ?? 0;
-      const upgCritChance = (loaded as { upgradeCritChanceRank?: number }).upgradeCritChanceRank ?? 0;
-      const upgCritMult = (loaded as { upgradeCritMultiplierRank?: number }).upgradeCritMultiplierRank ?? 0;
-      return { ...g, ...loaded, claimedMilestoneIndex: claimed, currentMilestoneTargetIndex, upgradeCycleSpeedRank: upgCycle, upgradeProductionRank: upgProd, upgradeCritChanceRank: upgCritChance, upgradeCritMultiplierRank: upgCritMult };
+      return { ...g, ...loaded, claimedMilestoneIndex: claimed, currentMilestoneTargetIndex };
     });
+
+    const rawCards = (saved.cards && typeof saved.cards === "object") ? saved.cards : {};
+    const cards = needsMigration ? migrateCardKeys(rawCards) : rawCards;
+
     return {
       baseResource: Decimal.fromString(saved.baseResource ?? "0"),
       ticketCurrency: Decimal.fromString(saved.ticketCurrency ?? "0"),
@@ -127,7 +156,8 @@ function deserialize(raw: string): GameState | null {
       upgradeMilestoneDoublerRank: Number(saved.upgradeMilestoneDoublerRank) || 0,
       claimedMissions: Array.isArray(saved.claimedMissions) ? saved.claimedMissions : [],
       rank: Number(saved.rank) || 1,
-      cards: (saved.cards && typeof saved.cards === "object") ? saved.cards : {},
+      cards,
+      activeLine: Number(saved.activeLine) || 1,
       generators,
       options: {
         showFPS: shared.showFPS,
@@ -167,12 +197,10 @@ export function usePersist() {
       lastSaveTimeRef.current = Date.now();
     };
 
-    // Auto-save every 30 seconds
     const interval = setInterval(() => {
       save();
     }, 30000);
 
-    // Initial save listener for exit/visibility change
     const onBeforeUnload = () => save();
     const onVisibilityChange = () => {
       if (document.visibilityState === "hidden") save();
@@ -185,7 +213,6 @@ export function usePersist() {
       clearInterval(interval);
       window.removeEventListener("beforeunload", onBeforeUnload);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      // Final save on cleanup
       save();
     };
   }, []);

@@ -1,3 +1,4 @@
+import { makeGeneratorId } from "./constants";
 import type { GeneratorId } from "./constants";
 
 export type MissionObjective =
@@ -24,7 +25,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: "mission_1",
     rank: 1,
-    objective: { type: "generatorCount", generatorId: "generator1", count: 10 },
+    objective: { type: "generatorCount", generatorId: makeGeneratorId(1, 1), count: 10 },
     rewards: [{ type: "baseResource", amount: 100 }],
   },
   {
@@ -36,7 +37,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: "mission_3",
     rank: 1,
-    objective: { type: "generatorCount", generatorId: "generator3", count: 1 },
+    objective: { type: "generatorCount", generatorId: makeGeneratorId(1, 3), count: 1 },
     rewards: [{ type: "baseResource", amount: 10000 }],
   },
   {
@@ -48,13 +49,13 @@ export const MISSIONS: MissionDef[] = [
   {
     id: "mission_5",
     rank: 1,
-    objective: { type: "generatorCount", generatorId: "generator2", count: 25 },
+    objective: { type: "generatorCount", generatorId: makeGeneratorId(1, 2), count: 25 },
     rewards: [{ type: "milestoneCurrency", amount: 5 }],
   },
   {
     id: "mission_6",
     rank: 1,
-    objective: { type: "generatorCount", generatorId: "generator1", count: 50 },
+    objective: { type: "generatorCount", generatorId: makeGeneratorId(1, 1), count: 50 },
     rewards: [{ type: "tickets", amount: 100 }],
   },
   {
@@ -66,7 +67,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: "mission_8",
     rank: 1,
-    objective: { type: "generatorCount", generatorId: "generator4", count: 1 },
+    objective: { type: "generatorCount", generatorId: makeGeneratorId(1, 4), count: 1 },
     rewards: [{ type: "milestoneCurrency", amount: 15 }],
   },
   {
@@ -78,13 +79,13 @@ export const MISSIONS: MissionDef[] = [
   {
     id: "mission_10",
     rank: 1,
-    objective: { type: "generatorCount", generatorId: "generator2", count: 100 },
+    objective: { type: "generatorCount", generatorId: makeGeneratorId(1, 2), count: 100 },
     rewards: [{ type: "baseResource", amount: 100000 }],
   },
   {
     id: "mission_11",
     rank: 1,
-    objective: { type: "generatorCount", generatorId: "generator3", count: 10 },
+    objective: { type: "generatorCount", generatorId: makeGeneratorId(1, 3), count: 10 },
     rewards: [{ type: "milestoneCurrency", amount: 20 }],
   },
   {

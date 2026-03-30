@@ -1,6 +1,6 @@
 import Decimal from "break_eternity.js";
 import type { GameState } from "@/store/gameState";
-import { GENERATOR_DEFS, GENERATOR_IDS } from "@/engine/constants";
+import { GENERATOR_DEFS } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import { advanceMilestoneTargetIndex } from "@/utils/milestones";
 import {
@@ -38,9 +38,7 @@ export function simulateOfflineProgress(
   const deltaSec = deltaMs / 1000;
 
   let baseResource = Decimal.fromDecimal(state.baseResource);
-  const deltas = Object.fromEntries(
-    GENERATOR_IDS.map((id) => [id, Decimal.dZero])
-  ) as Record<GeneratorId, Decimal>;
+  const deltas = new Map<GeneratorId, Decimal>();
 
   const updatedGenerators = state.generators.map((gen) => {
     const def = GENERATOR_DEFS[gen.id];
@@ -68,7 +66,8 @@ export function simulateOfflineProgress(
       if (def.produces === "base") {
         baseResource = baseResource.add(produced);
       } else {
-        deltas[def.produces] = deltas[def.produces].add(produced);
+        const prev = deltas.get(def.produces) ?? Decimal.dZero;
+        deltas.set(def.produces, prev.add(produced));
       }
       const cycleStartTime = now - progressRemainder * cycleTimeMs;
       return { ...gen, cycleProgress: progressRemainder, cycleStartTime };
@@ -96,11 +95,12 @@ export function simulateOfflineProgress(
     }
   }
 
-  const withQuantities = updatedGenerators.map((g) =>
-    deltas[g.id].gt(Decimal.dZero)
-      ? { ...g, quantity: g.quantity.add(deltas[g.id]) }
-      : g
-  );
+  const withQuantities = updatedGenerators.map((g) => {
+    const delta = deltas.get(g.id);
+    return delta && delta.gt(Decimal.dZero)
+      ? { ...g, quantity: g.quantity.add(delta) }
+      : g;
+  });
   const withTargets = withQuantities.map((g) => ({
     ...g,
     currentMilestoneTargetIndex: advanceMilestoneTargetIndex(

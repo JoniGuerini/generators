@@ -164,6 +164,42 @@ button:focus-visible {
     0 3px 0 0 #991b1b,
     0 4px 6px 0 rgba(0,0,0,0.3);
 }
+.btn-3d--blue {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #1e3a8a,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--green-badge {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #14532d,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--orange {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.2),
+    0 3px 0 0 #7c2d12,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--pink {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #831843,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--indigo {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #312e81,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--lime {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.2),
+    0 3px 0 0 #365314,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
 .btn-3d--purple-dark {
   box-shadow:
     inset 0 1px 0 0 rgba(255,255,255,0.1),

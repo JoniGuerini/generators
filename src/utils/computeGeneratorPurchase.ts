@@ -1,6 +1,6 @@
 import Decimal from "break_eternity.js";
 import type { GameState } from "@/store/gameState";
-import { GENERATOR_DEFS, GENERATOR_IDS, type GeneratorId } from "@/engine/constants";
+import { GENERATOR_DEFS, type GeneratorId, parseGeneratorId, makeGeneratorId, GENERATORS_PER_LINE } from "@/engine/constants";
 import { getEffectiveGeneratorCost } from "@/engine/upgrades";
 import { getNextMilestoneFromQuantity } from "@/utils/milestones";
 import type { BuyMode } from "@/contexts/BuyModeContext";
@@ -14,12 +14,16 @@ export function getNextGeneratorCostInCurrent(
   id: GeneratorId,
   upgradeGeneratorCostHalfRank: number
 ): Decimal | null {
-  const idx = GENERATOR_IDS.indexOf(id);
-  if (idx < 0 || idx >= GENERATOR_IDS.length - 1) return null;
-  const nextId = GENERATOR_IDS[idx + 1];
+  const { line, gen } = parseGeneratorId(id);
+  if (gen >= GENERATORS_PER_LINE) return null;
+  const nextId = makeGeneratorId(line, gen + 1);
   const nextDef = GENERATOR_DEFS[nextId];
-  if (nextDef.costPreviousGenerator.lte(Decimal.dZero)) return null;
+  if (!nextDef || nextDef.costPreviousGenerator.lte(Decimal.dZero)) return null;
   return getEffectiveGeneratorCost(nextDef.costPreviousGenerator, upgradeGeneratorCostHalfRank);
+}
+
+export function isLastGeneratorInLine(id: GeneratorId): boolean {
+  return parseGeneratorId(id).gen >= GENERATORS_PER_LINE;
 }
 
 export function getBuyAmount(

@@ -1,7 +1,7 @@
 import Decimal from "break_eternity.js";
 import type { GameState } from "./gameState";
 import { getInitialState } from "./gameState";
-import { GENERATOR_DEFS } from "@/engine/constants";
+import { GENERATOR_DEFS, parseGeneratorId } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import {
   getCurrentMilestoneCount,
@@ -48,6 +48,7 @@ export type GameAction =
   | { type: "SET_LOCALE"; locale: string }
   | { type: "CLAIM_MISSION"; missionId: string; cards: Record<string, number> }
   | { type: "RANK_UP" }
+  | { type: "SET_ACTIVE_LINE"; line: number }
   | { type: "RESET_OPTIONS" }
   | { type: "RESET_GAME" }
   | { type: "REPLACE_STATE"; state: GameState };
@@ -298,7 +299,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (genIndex < 0) return state;
       const gen = state.generators[genIndex];
       const def = GENERATOR_DEFS[gen.id];
-      const generatorNumber = parseInt(gen.id.replace("generator", ""), 10);
+      const generatorNumber = parseGeneratorId(gen.id).gen;
 
       if (action.upgradeType === "cycleSpeed") {
         const maxRank = getMaxCycleSpeedRank(def.cycleTimeSeconds);
@@ -429,7 +430,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const currentCount = getCurrentMilestoneCount(gen.quantity);
       const claimed = gen.claimedMilestoneIndex;
       if (currentCount <= claimed) return state;
-      const generatorNumber = parseInt(gen.id.replace("generator", ""), 10);
+      const generatorNumber = parseGeneratorId(gen.id).gen;
       const baseCoins = getCoinsFromClaiming(generatorNumber, claimed, currentCount);
       const mult = getMilestoneRewardMultiplier(state.upgradeMilestoneDoublerRank);
       const coins = mult > 1 ? baseCoins.mul(mult) : baseCoins;
@@ -448,7 +449,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const updatedGens = state.generators.map((gen) => {
         const currentCount = getCurrentMilestoneCount(gen.quantity);
         if (currentCount <= gen.claimedMilestoneIndex) return gen;
-        const generatorNumber = parseInt(gen.id.replace("generator", ""), 10);
+        const generatorNumber = parseGeneratorId(gen.id).gen;
         totalCoins = totalCoins.add(
           getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentCount)
         );
@@ -523,6 +524,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const xp = state.claimedMissions.length - accumulated;
       if (xp < threshold) return state;
       return { ...state, rank: currentRank + 1 };
+    }
+
+    case "SET_ACTIVE_LINE": {
+      return { ...state, activeLine: action.line };
     }
 
     case "RESET_OPTIONS": {

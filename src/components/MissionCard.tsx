@@ -3,7 +3,7 @@ import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { getVisibleMissions, getRankProgress } from "@/engine/missions";
 import type { MissionDef, MissionReward } from "@/engine/missions";
-import { GENERATOR_DEFS } from "@/engine/constants";
+import { GENERATOR_DEFS, parseGeneratorId, getLineColor, LINE_COLOR_CLASSES } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import { formatNumber } from "@/utils/format";
 import { useT } from "@/locale";
@@ -32,8 +32,8 @@ function RewardBadge({ reward }: { reward: MissionReward }) {
         </span>
       );
     case "generators": {
-      const num = reward.generatorId.replace("generator", "");
       const def = GENERATOR_DEFS[reward.generatorId];
+      const num = String(parseGeneratorId(reward.generatorId).gen);
       return (
         <span className="flex w-full items-center justify-center gap-1 rounded bg-zinc-800 px-2 py-1 text-xs font-semibold text-red-300">
           {formatNumber(Decimal.fromNumber(reward.amount))}× {def?.name ?? `Gen ${num}`}
@@ -43,10 +43,13 @@ function RewardBadge({ reward }: { reward: MissionReward }) {
   }
 }
 
-function GeneratorBadge({ num }: { num: string }) {
+function GeneratorBadge({ generatorId }: { generatorId: GeneratorId }) {
+  const { gen, line } = parseGeneratorId(generatorId);
+  const color = getLineColor(line);
+  const classes = LINE_COLOR_CLASSES[color];
   return (
-    <span className="btn-3d--red inline-flex h-5 w-5 items-center justify-center rounded bg-red-600 text-[10px] font-bold text-white align-middle">
-      {num}
+    <span className={`${classes.btn3d} inline-flex h-5 w-5 items-center justify-center rounded ${classes.bg} text-[10px] font-bold text-white align-middle`}>
+      {gen}
     </span>
   );
 }
@@ -56,10 +59,9 @@ function getObjectiveContent(mission: MissionDef, t: ReturnType<typeof useT>): R
   const fmt = (n: number) => formatNumber(Decimal.fromNumber(n));
   switch (obj.type) {
     case "generatorCount": {
-      const num = obj.generatorId.replace("generator", "");
       return (
         <span className="inline-flex items-center gap-1">
-          {t.missions.generatorCount(fmt(obj.count))} <GeneratorBadge num={num} />
+          {t.missions.generatorCount(fmt(obj.count))} <GeneratorBadge generatorId={obj.generatorId} />
         </span>
       );
     }
@@ -112,10 +114,10 @@ function DialogRewardBadge({ reward }: { reward: MissionReward }) {
       );
     case "generators": {
       const def = GENERATOR_DEFS[reward.generatorId];
-      const num = reward.generatorId.replace("generator", "");
+      const num = String(parseGeneratorId(reward.generatorId).gen);
       return (
         <div className="flex items-center gap-2 rounded-lg bg-zinc-800 px-4 py-2">
-          <GeneratorBadge num={num} />
+          <GeneratorBadge generatorId={reward.generatorId} />
           <span className="text-sm font-semibold text-red-300">+{fmt(reward.amount)} {def?.name ?? `Gen ${num}`}</span>
         </div>
       );
@@ -134,7 +136,7 @@ function CardRewardBadge({ cardKey, count, t }: { cardKey: string; count: number
   const rarity = CARD_RARITY[type];
   const color = RARITY_TEXT_COLOR[rarity];
   const typeName = t.cards[type] ?? type;
-  const genNum = generatorId ? generatorId.replace("generator", "") : null;
+  const genNum = generatorId ? String(parseGeneratorId(generatorId).gen) : null;
   const label = genNum ? `${typeName} — ${t.cards.generator} ${genNum}` : typeName;
 
   return (

@@ -5,11 +5,46 @@ import { getCurrentMilestoneCount, getCoinsFromClaiming } from "@/utils/mileston
 import { getMilestoneRewardMultiplier } from "@/engine/upgrades";
 import { formatNumber } from "@/utils/format";
 import { useT } from "@/locale";
+import { LINE_COUNT, LINE_COLOR_CLASSES, getLineColor, parseGeneratorId } from "@/engine/constants";
 import { GeneratorRow } from "./GeneratorRow";
 import { MissionCard } from "./MissionCard";
 
+function LineSelector() {
+  const dispatch = useGameDispatch();
+  const activeLine = useGameSelector((s) => s.activeLine);
+
+  return (
+    <div className="flex w-full gap-1.5">
+      {Array.from({ length: LINE_COUNT }, (_, i) => {
+        const line = i + 1;
+        const color = getLineColor(line);
+        const classes = LINE_COLOR_CLASSES[color];
+        const isActive = line === activeLine;
+        return (
+          <button
+            key={line}
+            type="button"
+            onClick={() => dispatch({ type: "SET_ACTIVE_LINE", line })}
+            className={`flex h-7 flex-1 items-center justify-center rounded text-xs font-bold text-white transition-opacity ${
+              isActive
+                ? `${classes.btn3d} ${classes.bg}`
+                : "bg-zinc-700 text-zinc-500 opacity-60 hover:opacity-100"
+            }`}
+          >
+            {line}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function GeneratorList() {
-  const visibleIds = useGameSelector(getVisibleGeneratorIds, (a, b) => a.join() === b.join());
+  const activeLine = useGameSelector((s) => s.activeLine);
+  const visibleIds = useGameSelector(
+    (s) => getVisibleGeneratorIds(s, activeLine),
+    (a, b) => a.join() === b.join()
+  );
   const dispatch = useGameDispatch();
   const t = useT();
 
@@ -18,7 +53,7 @@ export function GeneratorList() {
     for (const gen of state.generators) {
       const currentCount = getCurrentMilestoneCount(gen.quantity);
       if (currentCount <= gen.claimedMilestoneIndex) continue;
-      const generatorNumber = parseInt(gen.id.replace("generator", ""), 10);
+      const generatorNumber = parseGeneratorId(gen.id).gen;
       coins = coins.add(
         getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentCount)
       );
@@ -32,6 +67,7 @@ export function GeneratorList() {
   return (
     <div className="flex min-w-0 flex-col gap-3 pt-2.5">
       <MissionCard />
+      <LineSelector />
       <ul className="flex min-w-0 flex-col gap-3">
         {visibleIds.map((id) => (
           <li key={id}>

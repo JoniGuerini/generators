@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, memo } from "react";
 import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
 import { useBuyMode } from "@/contexts/BuyModeContext";
-import { GENERATOR_DEFS } from "@/engine/constants";
+import { GENERATOR_DEFS, parseGeneratorId, getLineColor, LINE_COLOR_CLASSES } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import {
   getEffectiveCycleTimeSeconds,
@@ -19,8 +19,7 @@ import {
   getNextMilestoneFromQuantity,
   getCoinsFromClaiming,
 } from "@/utils/milestones";
-import { getBuyAmount, getNextGeneratorCostInCurrent } from "@/utils/computeGeneratorPurchase";
-import { GENERATOR_IDS } from "@/engine/constants";
+import { getBuyAmount, getNextGeneratorCostInCurrent, isLastGeneratorInLine } from "@/utils/computeGeneratorPurchase";
 import { useHoldToBuyGenerator } from "@/hooks/useHoldToBuyGenerator";
 import { useT } from "@/locale";
 
@@ -185,7 +184,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const producedPerCycle = productionPerCycle.mul(quantity);
   const producedPerSecond =
     cycleTimeSec > 0 ? producedPerCycle.div(cycleTimeSec) : Decimal.dZero;
-  const isLastGenerator = GENERATOR_IDS.indexOf(id) === GENERATOR_IDS.length - 1;
+  const isLastGenerator = isLastGeneratorInLine(id);
   const nextGenCost = buyMode === "proximo"
     ? getNextGeneratorCostInCurrent(id, upgradeGeneratorCostHalfRank)
     : null;
@@ -247,7 +246,9 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
 
   const currentMilestoneCount = getCurrentMilestoneCount(quantity);
   const pendingMilestones = Math.max(0, currentMilestoneCount - gen.claimedMilestoneIndex);
-  const generatorNumber = parseInt(id.replace("generator", ""), 10);
+  const { line: lineNum, gen: generatorNumber } = parseGeneratorId(id);
+  const lineColor = getLineColor(lineNum);
+  const colorClasses = LINE_COLOR_CLASSES[lineColor];
   const baseCoins = getCoinsFromClaiming(generatorNumber, gen.claimedMilestoneIndex, currentMilestoneCount);
   const milestoneMultiplier = getMilestoneRewardMultiplier(upgradeMilestoneDoublerRank);
   const coinsToClaim = milestoneMultiplier > 1 ? baseCoins.mul(milestoneMultiplier) : baseCoins;
@@ -265,7 +266,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
           aria-label={def.name}
           title={t.generator.lockedTitle}
         >
-          {id.replace("generator", "")}
+          {parseGeneratorId(id).gen}
         </div>
         <div className="flex h-[40px] min-w-0 flex-1 items-center justify-center rounded-md border-2 border-dashed border-zinc-600 bg-zinc-800/60">
           <span className="text-center text-sm font-medium text-zinc-500">
@@ -320,8 +321,8 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                 {hasPrevCost && def.produces !== "base" && (
                   <div className="flex w-full flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                     <div className="flex items-center gap-1.5">
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-red-600 text-[8px] font-bold text-white" aria-hidden>
-                        {def.produces.replace("generator", "")}
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${colorClasses.bg} text-[8px] font-bold text-white`} aria-hidden>
+                        {def.produces !== "base" ? parseGeneratorId(def.produces).gen : ""}
                       </span>
                       <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.generator}</span>
                     </div>
@@ -359,12 +360,11 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
 
   return (
     <div className="flex h-[40px] min-w-0 flex-nowrap items-center gap-2">
-      {/* Card do número do gerador — 40px (fundo vermelho, número em branco) */}
       <div
-        className="btn-3d--red flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-md bg-red-600 text-sm font-bold text-white"
+        className={`${colorClasses.btn3d} flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-md ${colorClasses.bg} text-sm font-bold text-white`}
         aria-label={def.name}
       >
-        {id.replace("generator", "")}
+        {generatorNumber}
       </div>
 
       {/* Barra de progresso para próximo marco (10, 100, 1k…) — clicável para resgatar */}
@@ -475,8 +475,8 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                     ●
                   </span>
                 ) : (
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-red-600 text-[10px] font-bold text-white" title={GENERATOR_DEFS[def.produces].name}>
-                    {def.produces.replace("generator", "")}
+                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${colorClasses.bg} text-[10px] font-bold text-white`} title={GENERATOR_DEFS[def.produces].name}>
+                    {parseGeneratorId(def.produces).gen}
                   </div>
                 )}
               </>
@@ -536,8 +536,8 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
               {hasPrevCost && def.produces !== "base" && (
                 <div className="flex w-full flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-red-600 text-[8px] font-bold text-white" aria-hidden>
-                      {def.produces.replace("generator", "")}
+                    <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded ${colorClasses.bg} text-[8px] font-bold text-white`} aria-hidden>
+                      {def.produces !== "base" ? parseGeneratorId(def.produces).gen : ""}
                     </span>
                     <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.generator}</span>
                   </div>

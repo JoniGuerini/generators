@@ -1,120 +1,112 @@
 import Decimal from "break_eternity.js";
 
-export const GENERATOR_IDS = [
-  "generator1",
-  "generator2",
-  "generator3",
-  "generator4",
-  "generator5",
-  "generator6",
-  "generator7",
-  "generator8",
-  "generator9",
-  "generator10",
-] as const;
-export type GeneratorId = (typeof GENERATOR_IDS)[number];
+export const LINE_COUNT = 10;
+export const GENERATORS_PER_LINE = 10;
+
+export type GeneratorId = string;
+
+export function makeGeneratorId(line: number, gen: number): GeneratorId {
+  return `l${line}g${gen}`;
+}
+
+export function parseGeneratorId(id: GeneratorId): { line: number; gen: number } {
+  const match = id.match(/^l(\d+)g(\d+)$/);
+  if (!match) throw new Error(`Invalid generator ID: ${id}`);
+  return { line: parseInt(match[1], 10), gen: parseInt(match[2], 10) };
+}
 
 export interface GeneratorDef {
   id: GeneratorId;
   name: string;
+  line: number;
+  genNumber: number;
   cycleTimeSeconds: number;
   productionPerCycle: Decimal;
   cost: Decimal;
-  /** id do gerador produzido ("base" = recurso base) */
   produces: GeneratorId | "base";
-  /** Custo em unidades do gerador anterior (0 para Gerador 1). */
   costPreviousGenerator: Decimal;
 }
 
-export const GENERATOR_DEFS: Record<GeneratorId, GeneratorDef> = {
-  generator1: {
-    id: "generator1",
-    name: "Gerador 1",
-    cycleTimeSeconds: 2,
-    productionPerCycle: Decimal.fromNumber(3),
-    cost: Decimal.fromNumber(10),
-    produces: "base",
-    costPreviousGenerator: Decimal.dZero,
-  },
-  generator2: {
-    id: "generator2",
-    name: "Gerador 2",
-    cycleTimeSeconds: 4,
-    productionPerCycle: Decimal.fromNumber(4),
-    cost: Decimal.fromNumber(100),
-    produces: "generator1",
-    costPreviousGenerator: Decimal.fromNumber(10),
-  },
-  generator3: {
-    id: "generator3",
-    name: "Gerador 3",
-    cycleTimeSeconds: 8,
-    productionPerCycle: Decimal.fromNumber(5),
-    cost: Decimal.fromNumber(10000),
-    produces: "generator2",
-    costPreviousGenerator: Decimal.fromNumber(50),
-  },
-  generator4: {
-    id: "generator4",
-    name: "Gerador 4",
-    cycleTimeSeconds: 16,
-    productionPerCycle: Decimal.fromNumber(6),
-    cost: Decimal.fromNumber(10000000),
-    produces: "generator3",
-    costPreviousGenerator: Decimal.fromNumber(100),
-  },
-  generator5: {
-    id: "generator5",
-    name: "Gerador 5",
-    cycleTimeSeconds: 32,
-    productionPerCycle: Decimal.fromNumber(7),
-    cost: Decimal.fromNumber(100000000000),
-    produces: "generator4",
-    costPreviousGenerator: Decimal.fromNumber(1000),
-  },
-  generator6: {
-    id: "generator6",
-    name: "Gerador 6",
-    cycleTimeSeconds: 64,
-    productionPerCycle: Decimal.fromNumber(8),
-    cost: Decimal.pow(10, 16),
-    produces: "generator5",
-    costPreviousGenerator: Decimal.fromNumber(100000),
-  },
-  generator7: {
-    id: "generator7",
-    name: "Gerador 7",
-    cycleTimeSeconds: 128,
-    productionPerCycle: Decimal.fromNumber(9),
-    cost: Decimal.pow(10, 22),
-    produces: "generator6",
-    costPreviousGenerator: Decimal.pow(10, 6),
-  },
-  generator8: {
-    id: "generator8",
-    name: "Gerador 8",
-    cycleTimeSeconds: 256,
-    productionPerCycle: Decimal.fromNumber(10),
-    cost: Decimal.pow(10, 29),
-    produces: "generator7",
-    costPreviousGenerator: Decimal.pow(10, 7),
-  },
-  generator9: {
-    id: "generator9",
-    name: "Gerador 9",
-    cycleTimeSeconds: 512,
-    productionPerCycle: Decimal.fromNumber(11),
-    cost: Decimal.pow(10, 37),
-    produces: "generator8",
-    costPreviousGenerator: Decimal.pow(10, 8),
-  },
-  generator10: {
-    id: "generator10",
-    name: "Gerador 10",
-    cycleTimeSeconds: 1024,
-    productionPerCycle: Decimal.fromNumber(12),
-    cost: Decimal.pow(10, 46),
-    produces: "generator9",
-    costPreviousGenerator: Decimal.pow(10, 9),
-  },
+const BASE_CYCLE_TIMES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
+const BASE_PRODUCTIONS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const BASE_COSTS: Decimal[] = [
+  Decimal.fromNumber(10),
+  Decimal.fromNumber(100),
+  Decimal.fromNumber(10_000),
+  Decimal.fromNumber(10_000_000),
+  Decimal.fromNumber(100_000_000_000),
+  Decimal.pow(10, 16),
+  Decimal.pow(10, 22),
+  Decimal.pow(10, 29),
+  Decimal.pow(10, 37),
+  Decimal.pow(10, 46),
+];
+const BASE_PREV_GEN_COSTS: Decimal[] = [
+  Decimal.dZero,
+  Decimal.fromNumber(10),
+  Decimal.fromNumber(50),
+  Decimal.fromNumber(100),
+  Decimal.fromNumber(1_000),
+  Decimal.fromNumber(100_000),
+  Decimal.pow(10, 6),
+  Decimal.pow(10, 7),
+  Decimal.pow(10, 8),
+  Decimal.pow(10, 9),
+];
+
+export const GENERATOR_IDS: GeneratorId[] = [];
+export const LINE_GENERATOR_IDS: GeneratorId[][] = [];
+export const GENERATOR_DEFS: Record<GeneratorId, GeneratorDef> = {};
+
+for (let line = 1; line <= LINE_COUNT; line++) {
+  const lineIds: GeneratorId[] = [];
+  const cycleMultiplier = Math.pow(2, line - 1);
+  const prodMultiplier = Math.pow(3, line - 1);
+
+  for (let gen = 1; gen <= GENERATORS_PER_LINE; gen++) {
+    const id = makeGeneratorId(line, gen);
+    GENERATOR_IDS.push(id);
+    lineIds.push(id);
+
+    GENERATOR_DEFS[id] = {
+      id,
+      name: `Gerador ${gen}`,
+      line,
+      genNumber: gen,
+      cycleTimeSeconds: BASE_CYCLE_TIMES[gen - 1] * cycleMultiplier,
+      productionPerCycle: Decimal.fromNumber(BASE_PRODUCTIONS[gen - 1] * prodMultiplier),
+      cost: BASE_COSTS[gen - 1],
+      produces: gen === 1 ? "base" : makeGeneratorId(line, gen - 1),
+      costPreviousGenerator: BASE_PREV_GEN_COSTS[gen - 1],
+    };
+  }
+
+  LINE_GENERATOR_IDS.push(lineIds);
+}
+
+export function getLineGeneratorIds(line: number): GeneratorId[] {
+  return LINE_GENERATOR_IDS[line - 1] ?? [];
+}
+
+export const LINE_COLORS = [
+  "red", "blue", "green", "amber", "violet",
+  "cyan", "orange", "pink", "indigo", "lime",
+] as const;
+export type LineColor = (typeof LINE_COLORS)[number];
+
+export function getLineColor(line: number): LineColor {
+  return LINE_COLORS[(line - 1) % LINE_COLORS.length];
+}
+
+export const LINE_COLOR_CLASSES: Record<LineColor, { bg: string; btn3d: string }> = {
+  red:    { bg: "bg-red-600",    btn3d: "btn-3d--red" },
+  blue:   { bg: "bg-blue-600",   btn3d: "btn-3d--blue" },
+  green:  { bg: "bg-green-600",  btn3d: "btn-3d--green-badge" },
+  amber:  { bg: "bg-amber-500",  btn3d: "btn-3d--amber" },
+  violet: { bg: "bg-violet-600", btn3d: "btn-3d--violet" },
+  cyan:   { bg: "bg-cyan-600",   btn3d: "btn-3d--cyan" },
+  orange: { bg: "bg-orange-500", btn3d: "btn-3d--orange" },
+  pink:   { bg: "bg-pink-600",   btn3d: "btn-3d--pink" },
+  indigo: { bg: "bg-indigo-600", btn3d: "btn-3d--indigo" },
+  lime:   { bg: "bg-lime-600",   btn3d: "btn-3d--lime" },
 };

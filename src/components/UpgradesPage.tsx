@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
-import { GENERATOR_DEFS } from "@/engine/constants";
+import { GENERATOR_DEFS, parseGeneratorId, getLineColor, LINE_COLOR_CLASSES } from "@/engine/constants";
 import { useT } from "@/locale";
 import { getCardKey, getCardsNeeded, CARD_RARITY } from "@/engine/cards";
 import type { CardRarity } from "@/engine/cards";
@@ -205,7 +205,9 @@ export function UpgradesPage() {
     generatorsData,
     cards,
   } = useGameSelector((state) => {
-    const everOwnedIds = state.generators.filter(g => g.everOwned).map(g => g.id);
+    const everOwnedIds = state.generators
+      .filter(g => g.everOwned && parseGeneratorId(g.id).line === state.activeLine)
+      .map(g => g.id);
     const generatorsData = state.generators.map(g => ({
       id: g.id,
       upgradeCycleSpeedRank: g.upgradeCycleSpeedRank,
@@ -420,10 +422,9 @@ export function UpgradesPage() {
                   const def = GENERATOR_DEFS[id];
                   const gen = generatorsData.find((g) => g.id === id);
                   if (!gen) return null;
-                  const generatorNumber = parseInt(
-                    id.replace("generator", ""),
-                    10
-                  );
+                  const { gen: generatorNumber, line: lineNum } = parseGeneratorId(id);
+                  const lineColor = getLineColor(lineNum);
+                  const colorClasses = LINE_COLOR_CLASSES[lineColor];
                   const maxCycleRank = getMaxCycleSpeedRank(
                     def.cycleTimeSeconds
                   );
@@ -466,7 +467,7 @@ export function UpgradesPage() {
                       key={id}
                       className="flex items-center gap-2"
                     >
-                      <div className="btn-3d--red flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-600/90 text-sm font-bold text-white" title={def.name}>
+                      <div className={`${colorClasses.btn3d} flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${colorClasses.bg}/90 text-sm font-bold text-white`} title={def.name}>
                         {generatorNumber}
                       </div>
                       <div className="flex min-w-0 flex-1 flex-wrap gap-2">

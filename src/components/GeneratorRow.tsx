@@ -253,7 +253,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const ticketCostPerUnit = parseGeneratorId(id).line;
   const ticketsRequired = (amountForDisplay >= 1 ? amountForDisplay : 1) * ticketCostPerUnit;
   const lacksBase = lineResource.lt(displayCost);
-  const lacksTickets = ticketCurrency.lt(Decimal.fromNumber(ticketCostPerUnit));
+  const lacksTickets = ticketCurrency.lt(Decimal.fromNumber(ticketsRequired));
   const lacksPrev = hasPrevCost && (
     prevGenQuantity
       ? prevGenQuantity.lt(displayPrevCost)
@@ -335,7 +335,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                 <div className="flex flex-row items-stretch gap-2">
                   <div className="flex w-[7rem] flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                     <div className="flex items-center gap-1.5">
-                      <span className={`${colorClasses.text} text-xs`} aria-hidden>●</span>
+                      <span className={`${colorClasses.textVivid} text-sm`} aria-hidden>●</span>
                       <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.resource}</span>
                     </div>
                     <span className={`truncate text-sm font-bold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>
@@ -519,7 +519,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                   {!showCycleTime && <span className="ml-0.5">/s</span>}
                 </span>
                 {def.produces === "base" ? (
-                  <span className={`${colorClasses.text} text-[14px] leading-none`} title="recurso" aria-hidden>
+                  <span className={`${colorClasses.textVivid} text-sm leading-none`} title="recurso" aria-hidden>
                     ●
                   </span>
                 ) : (
@@ -564,7 +564,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
               <div className="flex flex-row items-stretch gap-2">
                 <div className="flex w-[7rem] flex-col gap-0.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-3 py-1.5">
                   <div className="flex items-center gap-1.5">
-                    <span className={`${colorClasses.text} text-xs`} aria-hidden>●</span>
+                    <span className={`${colorClasses.textVivid} text-sm`} aria-hidden>●</span>
                     <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.resource}</span>
                   </div>
                   <span className={`truncate text-sm font-bold tabular-nums ${lacksBase ? "text-red-400" : "text-white"}`}>

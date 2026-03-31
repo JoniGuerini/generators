@@ -4,7 +4,6 @@ import {
   playClickUp,
   setSfxEnabled,
   setSfxVolume,
-  setSfxStyle,
 } from "@/utils/sound";
 import { setAppLocale } from "@/locale";
 import type { Locale } from "@/locale";
@@ -12,7 +11,6 @@ import type { Locale } from "@/locale";
 interface SoundOptions {
   sfxEnabled: boolean;
   sfxVolume: number;
-  sfxStyle: string;
   locale: string;
 }
 
@@ -20,9 +18,8 @@ export function useButtonSounds(options: SoundOptions) {
   useEffect(() => {
     setSfxEnabled(options.sfxEnabled);
     setSfxVolume(options.sfxVolume);
-    setSfxStyle(options.sfxStyle);
     setAppLocale(options.locale as Locale);
-  }, [options.sfxEnabled, options.sfxVolume, options.sfxStyle, options.locale]);
+  }, [options.sfxEnabled, options.sfxVolume, options.locale]);
 
   useEffect(() => {
     function isButtonEnabled(target: HTMLElement): boolean {

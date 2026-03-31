@@ -6,7 +6,6 @@ interface SettingsOptions {
   showFPS: boolean;
   sfxEnabled: boolean;
   sfxVolume: number;
-  sfxStyle: string;
   locale: string;
 }
 
@@ -24,11 +23,6 @@ export function SettingsMenu({ options, dispatch, showDocsButton, onDocsClick }:
   const [tab, setTab] = useState<MenuTab>("geral");
   const [confirmingReset, setConfirmingReset] = useState(false);
   const t = useT();
-
-  const sfxStyleOptions = [
-    { value: "soft", label: t.sound.soft },
-    { value: "mechanical", label: t.sound.mechanical },
-  ];
 
   const close = useCallback(() => { setIsOpen(false); setConfirmingReset(false); }, []);
 
@@ -82,12 +76,22 @@ export function SettingsMenu({ options, dispatch, showDocsButton, onDocsClick }:
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
               {tab === "geral" && (
                 <>
-                  <SelectOption
-                    label={t.settings.language}
-                    value={options.locale}
-                    options={LOCALE_OPTIONS}
-                    onChange={(v) => dispatch({ type: "SET_LOCALE", locale: v })}
-                  />
+                  <div className="flex gap-2">
+                    {LOCALE_OPTIONS.map((loc) => (
+                      <button
+                        key={loc.value}
+                        type="button"
+                        onClick={() => dispatch({ type: "SET_LOCALE", locale: loc.value })}
+                        className={`btn-3d flex-1 rounded-lg px-3 py-2.5 text-sm font-medium ${
+                          options.locale === loc.value
+                            ? "btn-3d--cyan bg-cyan-600 text-white"
+                            : "btn-3d--zinc bg-zinc-700/80 text-zinc-400"
+                        }`}
+                      >
+                        {loc.label}
+                      </button>
+                    ))}
+                  </div>
                   <ToggleOption
                     label={t.settings.showFps}
                     description={t.settings.showFpsDesc}
@@ -122,13 +126,6 @@ export function SettingsMenu({ options, dispatch, showDocsButton, onDocsClick }:
                     label={t.settings.volume}
                     value={options.sfxVolume}
                     onChange={(v) => dispatch({ type: "SET_SFX_VOLUME", volume: v })}
-                    disabled={!options.sfxEnabled}
-                  />
-                  <SelectOption
-                    label={t.settings.style}
-                    value={options.sfxStyle}
-                    options={sfxStyleOptions}
-                    onChange={(v) => dispatch({ type: "SET_SFX_STYLE", style: v })}
                     disabled={!options.sfxEnabled}
                   />
                 </>
@@ -201,7 +198,7 @@ function ToggleOption({ label, description, checked, onChange }: {
   onChange: () => void;
 }) {
   return (
-    <label className="btn-3d btn-3d--zinc flex cursor-pointer items-center justify-between rounded-lg border border-zinc-600 bg-zinc-700 px-4 py-3 hover:bg-zinc-600">
+    <label className="btn-3d btn-3d--zinc flex cursor-pointer items-center justify-between rounded-lg bg-zinc-700 px-4 py-3 hover:bg-zinc-600">
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium text-zinc-200">{label}</span>
         {description && (
@@ -225,7 +222,7 @@ function SliderOption({ label, value, onChange, disabled }: {
   disabled?: boolean;
 }) {
   return (
-    <div className={`btn-3d--zinc flex flex-col gap-2 rounded-lg border border-zinc-600 bg-zinc-700 px-4 py-3 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
+    <div className={`btn-3d btn-3d--zinc flex flex-col gap-2 rounded-lg bg-zinc-700 px-4 py-3 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-zinc-200">{label}</span>
         <span className="text-sm tabular-nums text-zinc-400">{value}%</span>
@@ -244,49 +241,6 @@ function SliderOption({ label, value, onChange, disabled }: {
   );
 }
 
-function SelectOption({ label, value, options, onChange, disabled }: {
-  label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
-  disabled?: boolean;
-}) {
-  const currentLabel = options.find((o) => o.value === value)?.label ?? value;
-
-  return (
-    <div className={`flex flex-col gap-2 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
-      <div className="group/sfx relative">
-        <button
-          type="button"
-          disabled={disabled}
-          className="btn-3d btn-3d--zinc flex w-full items-center justify-between rounded-lg border border-zinc-600 bg-zinc-700 px-4 py-3 text-sm text-zinc-200 hover:bg-zinc-600"
-        >
-          <span className="font-medium">{label}</span>
-          <span className="text-zinc-400">{currentLabel}</span>
-        </button>
-        <div className="pointer-events-none absolute top-full left-0 right-0 z-50 pt-2 opacity-0 transition-opacity duration-100 group-hover/sfx:pointer-events-auto group-hover/sfx:opacity-100">
-          <div className="flex flex-col gap-2">
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onChange(opt.value)}
-                className={`btn-3d flex h-[40px] w-full items-center justify-center rounded-lg text-sm font-medium transition ${
-                  value === opt.value
-                    ? "btn-3d--violet bg-violet-600 text-white"
-                    : "btn-3d--zinc bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function MenuButton({ label, description, variant = "default", onClick }: {
   label: string;
   description?: string;
@@ -301,7 +255,7 @@ function MenuButton({ label, description, variant = "default", onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className={`flex w-full flex-col gap-0.5 rounded-lg border border-zinc-600 px-4 py-3 text-left ${classes}`}
+      className={`flex w-full flex-col gap-0.5 rounded-lg px-4 py-3 text-left ${classes}`}
     >
       <span className="text-sm font-medium">{label}</span>
       {description && (

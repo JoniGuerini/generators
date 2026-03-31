@@ -1,6 +1,6 @@
 import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
-import { getVisibleGeneratorIds } from "@/store/gameState";
+import { getVisibleGeneratorIds, isLineUnlocked } from "@/store/gameState";
 import type { LineStats } from "@/store/gameState";
 import { getCurrentMilestoneCount, getCoinsFromClaiming } from "@/utils/milestones";
 import { getMilestoneRewardMultiplier } from "@/engine/upgrades";
@@ -11,7 +11,10 @@ import { GeneratorRow } from "./GeneratorRow";
 
 function LineSelector() {
   const dispatch = useGameDispatch();
-  const activeLine = useGameSelector((s) => s.activeLine);
+  const { activeLine, unlockedLines } = useGameSelector((s) => ({
+    activeLine: s.activeLine,
+    unlockedLines: Array.from({ length: LINE_COUNT }, (_, i) => isLineUnlocked(s, i + 1)),
+  }), (a, b) => a.activeLine === b.activeLine && a.unlockedLines.every((v, i) => v === b.unlockedLines[i]));
 
   return (
     <div className="flex w-full gap-1.5">
@@ -20,6 +23,17 @@ function LineSelector() {
         const color = getLineColor(line);
         const classes = LINE_COLOR_CLASSES[color];
         const isActive = line === activeLine;
+        const unlocked = unlockedLines[i];
+        if (!unlocked) {
+          return (
+            <div
+              key={line}
+              className="flex h-7 flex-1 items-center justify-center rounded border border-dashed border-zinc-600 bg-zinc-800/60 text-[10px] text-zinc-600"
+            >
+              <span className="font-bold text-[8px] uppercase tracking-wider">bloq.</span>
+            </div>
+          );
+        }
         return (
           <button
             key={line}
@@ -82,7 +96,7 @@ export function GeneratorList() {
       <LineSelector />
       <div className="flex items-center gap-3 rounded-lg bg-zinc-900/70 px-3 py-1.5">
         <div className="flex items-center gap-1.5">
-          <span className={`text-xs ${colorClasses.text}`} aria-hidden>●</span>
+          <span className={`text-4xl ${colorClasses.textVivid}`} aria-hidden>●</span>
           <span className="text-lg font-bold tabular-nums text-white">{formatNumber(lineResource)}</span>
         </div>
         <div className="ml-auto flex items-center gap-3 text-xs tabular-nums text-zinc-500">

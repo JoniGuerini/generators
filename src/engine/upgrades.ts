@@ -63,19 +63,31 @@ export function getMaxAffordableTrades(currentCount: number, resource: Decimal):
   return { trades, totalCost };
 }
 
-/** Produção base de ▲/s = 1 + soma de trocas de todas as linhas. */
-function getTicketProductionBase(totalTrades: number): number {
-  return 1 + Math.max(0, totalTrades);
+/** Valor por troca: 2^tradeDoublerRank (1, 2, 4, 8…). */
+export function getTicketTradeValue(tradeDoublerRank: number): number {
+  return 2 ** Math.max(0, tradeDoublerRank);
+}
+
+/** Produção base de ▲/s = 1 + totalTrades × tradeValue. */
+function getTicketProductionBase(totalTrades: number, tradeDoublerRank: number): number {
+  const tradeValue = getTicketTradeValue(tradeDoublerRank);
+  return 1 + Math.max(0, totalTrades) * tradeValue;
 }
 
 /** Tickets por segundo = produção base × 2^multiplierRank. */
 export function getTicketsPerSecond(
   totalTrades: number = 0,
-  upgradeTicketMultiplierRank: number = 0
+  upgradeTicketMultiplierRank: number = 0,
+  upgradeTicketTradeDoublerRank: number = 0
 ): number {
-  const base = getTicketProductionBase(totalTrades);
+  const base = getTicketProductionBase(totalTrades, upgradeTicketTradeDoublerRank);
   const mult = 2 ** Math.max(0, upgradeTicketMultiplierRank);
   return base * mult;
+}
+
+/** Custo em ◆ para "dobrar valor de troca ▲/s": 1, 2, 4, 8… (dobra por ranque). */
+export function getUpgradeCostTicketTradeDoubler(currentRank: number): Decimal {
+  return Decimal.pow(Decimal.fromNumber(2), Math.max(0, currentRank));
 }
 
 /** Custo em ◆ para "dobrar produção de ▲/s": 1, 4, 16, 64… (quadruplica por ranque). */

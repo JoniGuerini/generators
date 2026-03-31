@@ -1,5 +1,5 @@
 import Decimal from "break_eternity.js";
-import { GENERATOR_IDS, getLineGeneratorIds, parseGeneratorId, LINE_COUNT, type GeneratorId } from "@/engine/constants";
+import { GENERATOR_IDS, getLineGeneratorIds, parseGeneratorId, makeGeneratorId, LINE_COUNT, type GeneratorId } from "@/engine/constants";
 
 export interface GeneratorState {
   id: GeneratorId;
@@ -28,6 +28,7 @@ export interface GameState {
   milestoneCurrency: Decimal;
   lineTicketTradeCounts: Record<number, number>;
   upgradeTicketMultiplierRank: number;
+  upgradeTicketTradeDoublerRank: number;
   upgradeGeneratorCostHalfRank: number;
   upgradeMilestoneDoublerRank: number;
   generators: GeneratorState[];
@@ -38,7 +39,6 @@ export interface GameState {
     showFPS: boolean;
     sfxEnabled: boolean;
     sfxVolume: number;
-    sfxStyle: string;
     locale: string;
   };
 }
@@ -65,6 +65,25 @@ function initialGeneratorState(id: GeneratorId): GeneratorState {
 
 export function getTotalTicketTrades(state: GameState): number {
   return Object.values(state.lineTicketTradeCounts).reduce((sum, c) => sum + c, 0);
+}
+
+/**
+ * Line N requires Generator N of Line N-1 to be owned.
+ * E.g. Line 2 needs l1g2, Line 3 needs l2g3, Line 10 needs l9g10.
+ */
+export function getLineUnlockRequirement(line: number): { genId: GeneratorId; line: number; gen: number } | null {
+  if (line <= 1) return null;
+  const prevLine = line - 1;
+  const genNum = line;
+  return { genId: makeGeneratorId(prevLine, genNum), line: prevLine, gen: genNum };
+}
+
+export function isLineUnlocked(state: GameState, line: number): boolean {
+  if (line <= 1) return true;
+  const req = getLineUnlockRequirement(line);
+  if (!req) return true;
+  const gen = state.generators.find(g => g.id === req.genId);
+  return gen?.everOwned === true;
 }
 
 export function getLineResource(state: GameState, line: number): Decimal {
@@ -99,6 +118,7 @@ export function getInitialState(): GameState {
       Array.from({ length: LINE_COUNT }, (_, i) => [i + 1, 0])
     ),
     upgradeTicketMultiplierRank: 0,
+    upgradeTicketTradeDoublerRank: 0,
     upgradeGeneratorCostHalfRank: 0,
     upgradeMilestoneDoublerRank: 0,
     generators: GENERATOR_IDS.map((id) => {
@@ -109,6 +129,6 @@ export function getInitialState(): GameState {
     activeLine: 1,
     lineStats: {},
     lastUpdateTimestamp: Date.now(),
-    options: { showFPS: false, sfxEnabled: true, sfxVolume: 50, sfxStyle: "soft", locale: "pt-BR" },
+    options: { showFPS: false, sfxEnabled: true, sfxVolume: 50, locale: "pt-BR" },
   };
 }

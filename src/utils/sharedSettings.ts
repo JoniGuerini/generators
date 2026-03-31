@@ -4,7 +4,6 @@ export interface SharedSettings {
   showFPS: boolean;
   sfxEnabled: boolean;
   sfxVolume: number;
-  sfxStyle: string;
   locale: string;
 }
 
@@ -12,7 +11,6 @@ const DEFAULTS: SharedSettings = {
   showFPS: false,
   sfxEnabled: true,
   sfxVolume: 50,
-  sfxStyle: "soft",
   locale: "pt-BR",
 };
 
@@ -31,10 +29,6 @@ export function loadSharedSettings(): SharedSettings {
         typeof parsed.sfxVolume === "number"
           ? parsed.sfxVolume
           : DEFAULTS.sfxVolume,
-      sfxStyle:
-        typeof parsed.sfxStyle === "string"
-          ? parsed.sfxStyle
-          : DEFAULTS.sfxStyle,
       locale:
         typeof parsed.locale === "string" ? parsed.locale : DEFAULTS.locale,
     };

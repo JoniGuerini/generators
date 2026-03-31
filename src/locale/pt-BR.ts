@@ -1,11 +1,13 @@
 export const ptBR = {
   header: {
-    resource: "Recurso",
-    resourceTooltip: "Recurso Base",
+    resource: "Recurso Total",
+    resourceTooltip: "Soma de recursos de todas as linhas",
     tickets: "Tickets",
     ticketsTooltip: "Moeda de Compra",
     upgrades: "Melhorias",
     upgradesTooltip: "Moeda de Marcos",
+    level: "Nível",
+    levelTooltip: "Total de geradores em produção",
     fps: "FPS",
     fpsTooltip: "Frames por segundo",
   },
@@ -29,16 +31,11 @@ export const ptBR = {
     sfxEnabled: "Efeitos Sonoros",
     sfxEnabledDesc: "Sons ao clicar botões",
     volume: "Volume",
-    style: "Estilo",
     resetGame: "Resetar Jogo",
     resetGameDesc: "Apaga todo o progresso e recomeça do zero",
     resetConfirmText: "Tem certeza? Todo o progresso será perdido.",
     confirm: "Confirmar",
     cancel: "Cancelar",
-  },
-  sound: {
-    soft: "Suave",
-    mechanical: "Mecânico",
   },
   buyMode: {
     ariaLabel: "Quantidade a comprar por clique",
@@ -81,12 +78,13 @@ export const ptBR = {
     generators: "Geradores",
     tickets: "Tickets",
     maxed: "Máx.",
-    rank: "ranque",
     ticketsPerSecond: "Tickets por segundo",
     doubleProduction: "Dobrar produção",
     tradeForTickets: "Trocar recurso por +1 ▲/s",
     tradesDone: "trocas feitas",
     halfCostAll: "Custo ÷2 (todos os geradores)",
+    doubleTradeValue: "Dobrar ▲/s por troca",
+    perTrade: "por troca",
     doubleMilestoneReward: "Dobrar ◆ por marco",
     perGenerator: "Por gerador",
     cycleTime: "Tempo de ciclo",
@@ -94,6 +92,11 @@ export const ptBR = {
     critChance: "Chance de crítico",
     critEfficiency: "Eficiência do crítico",
     holdToBuy: "segure para comprar em série",
+    lineLockedShort: "bloq.",
+    lineLockedDesc: "Desbloqueie esta linha para acessar as melhorias",
+    genLockedDesc: "Desbloqueie este gerador para acessar as melhorias",
+    tradeLineLockedDesc: "Desbloqueie esta linha para realizar trocas",
+    requiresGen: (gen: number, line: number) => `Requer Gerador ${gen} da Linha ${line}`,
   },
   docs: {
     title: "Documentação do Jogo",
@@ -101,69 +104,102 @@ export const ptBR = {
     tabCurrencies: "Moedas",
     tabGenerators: "Geradores",
     tabUpgrades: "Melhorias",
+    tabLines: "Linhas",
     basicsTitle: "O Básico",
     basicsText:
-      'O principal objetivo do jogo é acumular <strong>Recurso Base (●)</strong> através de Geradores. O progresso é infinito, baseado na compra de geradores cada vez mais poderosos, e é medido pela capacidade de alcançar valores inimagináveis (utilizando <code class="rounded bg-zinc-700 px-1 text-sm text-pink-400">break_eternity.js</code> para lidar com números absurdamente grandes).',
+      'O jogo possui <strong>10 linhas de produção</strong>, cada uma com <strong>10 geradores</strong>, totalizando 100 geradores. Cada linha possui sua própria cor e produz seu próprio recurso. O objetivo é expandir todas as linhas, comprando geradores cada vez mais poderosos. Seu <strong>Nível</strong> (exibido no header) é a soma de todos os geradores que você possui em produção (máximo 100).',
     currenciesTitle: "As Moedas",
-    baseResourceTitle: "● Recurso Base",
+    baseResourceTitle: "● Recurso (por linha)",
     baseResourceDesc:
-      "É o recurso principal do jogo. Usado para comprar o Seu <strong>Gerador 1</strong> e para realizar trocas (Trades).",
-    baseResourceHow: "<strong>Como Obter:</strong> É gerado exclusivamente pelo <strong>Gerador 1</strong>.",
-    baseResourceInit: "<strong>Valor Inicial:</strong> Começa com 10 no início da jornada.",
-    ticketsTitle: "▲ Moeda de Compra (Tickets)",
+      "Cada linha de produção gera seu próprio recurso exclusivo (representado por ● na cor da linha). Esse recurso é usado para comprar geradores daquela linha e para realizar trocas.",
+    baseResourceHow: "<strong>Como Obter:</strong> Gerado pelo <strong>Gerador 1</strong> de cada linha. No início, clique no badge do Gerador 1 para produzir manualmente; a produção automática começa ao comprar a primeira unidade.",
+    baseResourceInit: "<strong>Recurso Total (Σ):</strong> O header exibe a soma de recursos de todas as linhas.",
+    ticketsTitle: "▲ Tickets",
     ticketsDesc:
-      "Usada exclusivamente como limite/custo de tempo para comprar Geradores. Todo gerador consome 1 Ticket por unidade comprada, o que atua como um limitador da velocidade em que você pode acumular sua fábrica.",
+      "Moeda universal usada para comprar geradores em todas as linhas. O custo em tickets escala com a linha: <strong>Linha 1 = 1 ticket</strong>, Linha 2 = 2 tickets, até Linha 10 = 10 tickets por gerador.",
     ticketsHow:
-      "<strong>Como Obter:</strong> A partir do momento em que você possui pelo menos 1 gerador, você começa a gerar 1 Ticket por segundo.",
+      "<strong>Como Obter:</strong> Ao possuir pelo menos 1 gerador, você gera 1 Ticket por segundo automaticamente.",
     ticketsIncrease:
-      '<strong>Aumentando Ganho:</strong> O ganho pode ser aumentado através das melhorias "Aumentar produção (+1/s)" ou "Dobrar Tickets gerados (x2)", e através de Trocas com o Recurso Base.',
+      '<strong>Aumentando Ganho:</strong> Trocas de recurso por ▲/s (menu "Trocas"), melhorias "Dobrar produção de ▲/s (×2)" e "Dobrar ▲/s por troca".',
     ticketsOffline:
-      "<strong>Sistemas Offlines:</strong> Essa moeda é gerada passivamente também enquanto você está offline!",
-    milestonesTitle: "◆ Moeda de Marcos (Melhorias)",
+      "<strong>Offline:</strong> Tickets são gerados passivamente enquanto você está offline.",
+    milestonesTitle: "◆ Moeda de Marcos",
     milestonesDesc:
-      'Moeda premium usada para comprar as Melhorias (Upgrades) no menu "Melhorias". Utilizada para reduzir tempo de ciclos, aumentar produção global, ou reduzir os custos.',
+      'Usada para comprar melhorias no menu "Melhorias". Obtida através da coleta de marcos nos geradores.',
     milestonesHow:
-      "<strong>Como Obter:</strong> Exclusivamente através da coleta de <strong>Marcos (Milestones)</strong> nos geradores.",
+      '<strong>Como Obter:</strong> Ao atingir fatores de <code class="text-pink-300">10^x</code> de um gerador (10, 100, 1k, 10k…), um marco fica disponível para coleta.',
     milestonesReward:
-      'A recompensa de resgate: Ao atingir fatores de <code class="text-pink-300">10^x</code> de um gerador (10, 100, 1.000, 10.000, etc.), o marco fica disponível. A moeda ganha escala de acordo com o Número do Gerador e o Nível do Marco.',
+      "<strong>Recompensa:</strong> Escala com o número do gerador e o nível do marco. Fórmula: (Nº do Gerador) + (Nível do Marco) - 1.",
     milestonesExample:
-      "Ex: Marco nível 3 do Gerador 5 fornecerá (Número do Gerador: 5) + (Nível do Marco: 3) - 1 = 7 Moedas ◆.",
+      "Ex: Marco nível 3 do Gerador 5 = 5 + 3 - 1 = 7 ◆.",
     generatorsTitle: "Os Geradores",
     generatorsIntro:
-      "Existem 20 Tiers de Geradores. Cada Gerador (exceto o Gerador 1) existe para alimentar o gerador anterior a ele. Essa cadeia exponencial cria o crescimento logarítmico do jogo.",
-    gen1: "<strong>Gerador 1:</strong> O único que produz o <strong>Recurso Base (●)</strong>. Custa 10 Recurso Base (e 1 Ticket ▲). Produz 3 Recurso Base a cada 2 segundos.",
+      "Cada linha de produção tem 10 geradores. O Gerador 1 produz o recurso da linha. Geradores 2-10 produzem unidades do gerador anterior, criando uma cadeia exponencial de crescimento.",
+    gen1: "<strong>Gerador 1:</strong> Produz o <strong>recurso da linha</strong>. No início ele vem desbloqueado — clique no badge para produzir manualmente. Após comprar a primeira unidade, a produção é automática.",
     gen2to20:
-      '<strong>Gerador 2 até o 20:</strong> Produzem as unidades do Gerador <strong>X-1</strong> diretamente. Por exemplo: O Gerador 2 produz "Geradores 1". O Gerador 20 produz "Geradores 19".',
+      "<strong>Geradores 2 a 10:</strong> Produzem unidades do gerador anterior. Ex: Gerador 3 produz unidades do Gerador 2. Para desbloquear a compra de um gerador, é preciso ter uma certa quantidade do gerador anterior.",
     cycleTime:
-      "<strong>Tempo de Ciclo:</strong> Cada novo Tier de Gerador leva o DOBRO de tempo do que o Gerador anterior para completar seu ciclo produtivo. (Gen 1 = 2s, Gen 2 = 4s, Gen 3 = 8s... Gen 20 = 12 dias!). Isso pode ser reduzido até um limite de 0.1s com upgrades.",
+      "<strong>Tempo de Ciclo:</strong> Cada tier leva o DOBRO do tempo do anterior (Gen 1 = 2s, Gen 2 = 4s… Gen 10 = ~17 min). Entre linhas, o tempo também dobra (Linha 2 tem o dobro da Linha 1). Pode ser reduzido até 0.1s com melhorias.",
     cascadeCost:
-      "<strong>Custo em Cascatas:</strong> Para comprar um Gerador, você paga 1 Ticket ▲, um valor em Recurso Base (●), E UM VALOR do seu Gerador Anterior.",
+      "<strong>Custo em Cascata:</strong> Cada gerador custa recurso da linha, tickets (N por unidade na Linha N), e unidades do gerador anterior.",
     cascadeCostExample:
-      "Ex: Gerador 3 requer 10.000 (●), 50 Geradores 2, e 1 Ticket ▲. Isso força você a esperar os geradores procriarem antes de subir de Tier!",
-    upgradesTitle: "Melhorias (Upgrades)",
+      "Ex: Gerador 3 da Linha 2 requer recurso azul, 2 tickets ▲, e unidades do Gerador 2.",
+    upgradesTitle: "Melhorias",
     upgradesIntro:
-      'A tela de "Melhorias" utiliza a Moeda de Marco (◆) para acelerar enormemente sua progressão. As opções incluem:',
+      'O menu "Melhorias" usa ◆ para acelerar sua progressão. Divididas em 3 abas:',
     upgCycleTitle: "Reduzir Tempo de Ciclo",
     upgCycleDesc:
-      "Exclusivo para cada gerador. Corta o tempo útil do ciclo pela Metade (÷2). O custo dobra a cada nível (1, 2, 4, 8...). O limite para todos é que não pode ser mais rápido do que 0.1s por ciclo.",
+      "Por gerador. Corta o tempo de ciclo pela metade (÷2). Custo: 1, 2, 4, 8… ◆. Limite: 0.1s por ciclo.",
     upgProdTitle: "Dobrar Produção",
     upgProdDesc:
-      "Exclusivo para cada gerador. Multiplica os lucros de unidades por ciclo (x2). O custo dobra a cada nível (1, 2, 4, 8...). Níveis Infinitos.",
-    upgTicketRateTitle: "Ganho de Tickets (+1/s)",
-    upgTicketRateDesc:
-      "Melhoria Global. Adiciona +1 a geração base de Tickets ▲ por segundo. Custo em ◆: 1, 2, 4, 8… (dobra a cada ranque). Níveis infinitos.",
-    upgTicketMultTitle: "Multiplicar Tickets (x2)",
+      "Por gerador. Dobra a produção por ciclo (×2). Custo: 1, 2, 4, 8… ◆. Ranques infinitos.",
+    upgCritChanceTitle: "Chance de Crítico",
+    upgCritChanceDesc:
+      "Por gerador. Cada ranque adiciona 2.5% de chance de crítico (máx. 100% com 40 ranques). Custo: 1, 2, 4, 8… ◆.",
+    upgCritMultTitle: "Eficiência do Crítico",
+    upgCritMultDesc:
+      "Por gerador. Aumenta o multiplicador de dano crítico (×2, ×4, ×6…). Custo: 1, 2, 4, 8… ◆. Ranques infinitos.",
+    upgTicketMultTitle: "Dobrar produção de ▲/s (×2)",
     upgTicketMultDesc:
-      "Melhoria Global. Dobra todo o ganho de Tickets ▲ por segundo. Custo em ◆: 1, 4, 16, 64… (quadruplica a cada ranque). Níveis infinitos.",
-    upgHalfCostTitle: "Mitade dos Custos",
+      "Global. Dobra toda a geração de tickets por segundo. Custo: 1, 4, 16, 64… ◆ (quadruplica por ranque). Ranques infinitos.",
+    upgTradeDoublerTitle: "Dobrar ▲/s por troca",
+    upgTradeDoublerDesc:
+      "Global. Dobra o valor de ▲/s que cada troca concede (1→2→4→8…). Custo: 1, 2, 4, 8… ◆.",
+    upgHalfCostTitle: "Custo ÷2 (todos os geradores)",
     upgHalfCostDesc:
-      "Melhoria Global. Esmaga o preço total em Recurso Base E o custo em Unidades do pre-requisito (Gen anterior) pela metade (÷2). Custa (50 * 2^nivel). Especialmente poderoso para acessar Gen 15 ao 20 mais rapidamente.",
-    upgTradeTitle: "Trocar Base por Tickets (Trades)",
+      "Global. Reduz pela metade o custo em recurso e em geradores anteriores. Custo: 1, 2, 4, 8… ◆.",
+    upgMilestoneDoublerTitle: "Dobrar ◆ por marco",
+    upgMilestoneDoublerDesc:
+      "Global. Dobra a recompensa de ◆ ao coletar marcos. Custo: 2, 8, 32, 128… ◆ (quadruplica por ranque).",
+    upgTradeTitle: "Trocas (menu Trocas)",
     upgTradeDesc:
-      "Melhoria Global. Esta opção não consome moedas ◆. Para liberar, você sacrifíca Recurso Base (●) em troca de um ganho permanente de +1 Ticket ▲/s na geração passiva. O preço cresce vertiginosamente a cada vez que é comprado (500, 5k, 5M, 5B, 5T...).",
+      "10 trocas independentes, uma por linha. Sacrifique recurso da linha por um ganho permanente de ▲/s. O custo cresce a cada troca (500, 5k, 5M, 5B…). Não consome ◆.",
+    linesTitle: "Linhas de Produção",
+    linesIntro:
+      "O jogo possui <strong>10 linhas de produção</strong>, cada uma com sua <strong>cor</strong>, <strong>recurso exclusivo</strong> e características únicas. Linhas superiores são mais lentas porém muito mais produtivas por ciclo.",
+    linesScaling: "Escalonamento entre linhas",
+    linesScalingCycle: "Tempo de ciclo",
+    linesScalingCycleDesc: "Cada linha seguinte tem o <strong>dobro</strong> do tempo de ciclo da anterior. Linha 1 começa com 2s no Gen 1, Linha 2 com 4s, Linha 10 com ~17 min.",
+    linesScalingProd: "Produção por ciclo",
+    linesScalingProdDesc: "Cada linha seguinte produz o <strong>triplo</strong> por ciclo. Linha 1 produz 3/ciclo no Gen 1, Linha 2 produz 9, Linha 10 produz 59.049.",
+    linesScalingTickets: "Custo em tickets",
+    linesScalingTicketsDesc: "Linha N consome <strong>N tickets</strong> por gerador comprado. Linha 1 = 1▲, Linha 5 = 5▲, Linha 10 = 10▲.",
+    linesScalingResource: "Recurso exclusivo",
+    linesScalingResourceDesc: "Cada linha produz e consome seu próprio recurso. Geradores da linha vermelha usam recurso vermelho, geradores da linha azul usam recurso azul, e assim por diante.",
+    linesUnlockTitle: "Desbloqueio de linhas",
+    linesUnlock: "A <strong>Linha 1</strong> começa desbloqueada. Para desbloquear a <strong>Linha N</strong>, é preciso possuir pelo menos <strong>1 unidade do Gerador N da Linha N-1</strong>.",
+    linesUnlockExample: "Ex: Para desbloquear a Linha 3, você precisa de 1 Gerador 3 da Linha 2. Para desbloquear a Linha 6, precisa de 1 Gerador 6 da Linha 5.",
+    lineNames: [
+      "Vermelha", "Azul", "Verde", "Âmbar", "Violeta",
+      "Ciano", "Laranja", "Rosa", "Índigo", "Lima",
+    ] as unknown as string,
+    lineLabel: "Linha",
+    lineTickets: "tickets/gerador",
+    lineCycleGen1: "Ciclo Gen 1",
+    lineProdGen1: "Prod. Gen 1",
     offlineTitle: "Simulação Offline",
     offlineText:
-      "O jogo calcula o seu progresso enquanto a aba estava fechada. Como geradores superiores criam geradores inferiores (que por sua vez geram recurso base), a matemática offline de múltiplas camadas de geração utiliza as mesmas fórmulas em loop limitando ticks por intervalo para criar uma previsão hiper-realista do que você teria gerado nas horas que ficou fora, incluindo o bônus dos geradores recém-nascidos atuando no espaço temporal.",
+      "O jogo calcula seu progresso enquanto a aba esteve fechada, simulando todas as camadas de produção e acumulando recursos, tickets e marcos de todas as linhas ativas.",
   },
 };
 

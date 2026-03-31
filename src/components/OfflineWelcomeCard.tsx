@@ -75,7 +75,7 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
             {t.offline.offlineGains}
           </p>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {lineResourceEntries.map(({ line, amount }) => {
               const color = getLineColor(line);
               const classes = LINE_COLOR_CLASSES[color];
@@ -100,7 +100,7 @@ export function OfflineWelcomeCard({ gains, onClose }: OfflineWelcomeCardProps) 
             </div>
           )}
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-2 grid grid-cols-2 gap-2">
             {gains.ticketCurrency.gt(Decimal.dZero) && (
               <div className="flex items-center gap-1.5 rounded-lg border border-zinc-600/80 bg-zinc-700/80 px-2.5 py-1.5">
                 <span className="text-amber-400 text-xs" aria-hidden>▲</span>

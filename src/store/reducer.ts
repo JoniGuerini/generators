@@ -18,6 +18,7 @@ import {
   getUpgradeCostGeneratorCostHalf,
   getTicketsPerSecond,
   getUpgradeCostTicketMultiplier,
+  getUpgradeCostTicketTradeDoubler,
   getMaxAffordableTrades,
   getUpgradeCostMilestoneDoubler,
   getMilestoneRewardMultiplier,
@@ -36,13 +37,13 @@ export type GameAction =
   | { type: "CLAIM_ALL_MILESTONES" }
   | { type: "BUY_UPGRADE"; id: GeneratorId; upgradeType: "cycleSpeed" | "production" | "critChance" | "critMultiplier" }
   | { type: "BUY_TICKET_MULTIPLIER_UPGRADE" }
+  | { type: "BUY_TICKET_TRADE_DOUBLER_UPGRADE" }
   | { type: "TRADE_BASE_FOR_TICKET_RATE"; line: number }
   | { type: "BUY_GENERATOR_COST_HALF_UPGRADE" }
   | { type: "BUY_MILESTONE_DOUBLER_UPGRADE" }
   | { type: "TOGGLE_FPS" }
   | { type: "TOGGLE_SFX" }
   | { type: "SET_SFX_VOLUME"; volume: number }
-  | { type: "SET_SFX_STYLE"; style: string }
   | { type: "SET_LOCALE"; locale: string }
   | { type: "SET_ACTIVE_LINE"; line: number }
   | { type: "RESET_OPTIONS" }
@@ -131,7 +132,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           const wholeSeconds = Math.floor(acc);
           const ticketsPerSec = getTicketsPerSecond(
             getTotalTicketTrades(state),
-            state.upgradeTicketMultiplierRank
+            state.upgradeTicketMultiplierRank,
+            state.upgradeTicketTradeDoublerRank
           );
           ticketCurrency = ticketCurrency.add(Decimal.fromNumber(wholeSeconds * ticketsPerSec));
           ticketAccumulator = acc - wholeSeconds;
@@ -358,6 +360,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case "BUY_TICKET_TRADE_DOUBLER_UPGRADE": {
+      const cost = getUpgradeCostTicketTradeDoubler(state.upgradeTicketTradeDoublerRank);
+      if (state.milestoneCurrency.lt(cost)) return state;
+      return {
+        ...state,
+        milestoneCurrency: state.milestoneCurrency.sub(cost),
+        upgradeTicketTradeDoublerRank: state.upgradeTicketTradeDoublerRank + 1,
+      };
+    }
+
     case "BUY_GENERATOR_COST_HALF_UPGRADE": {
       const cost = getUpgradeCostGeneratorCostHalf(state.upgradeGeneratorCostHalfRank);
       if (state.milestoneCurrency.lt(cost)) return state;
@@ -462,12 +474,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
-    case "SET_SFX_STYLE": {
-      return {
-        ...state,
-        options: { ...state.options, sfxStyle: action.style },
-      };
-    }
 
     case "SET_LOCALE": {
       return {
@@ -483,7 +489,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "RESET_OPTIONS": {
       return {
         ...state,
-        options: { showFPS: false, sfxEnabled: true, sfxVolume: 50, sfxStyle: "soft", locale: "pt-BR" },
+        options: { showFPS: false, sfxEnabled: true, sfxVolume: 50, locale: "pt-BR" },
       };
     }
 

@@ -20,6 +20,7 @@ interface SavedState {
   ticketTradeMilestoneCount?: number;
   lineTicketTradeCounts?: Record<string, number>;
   upgradeTicketMultiplierRank?: number;
+  upgradeTicketTradeDoublerRank?: number;
   upgradeGeneratorCostHalfRank?: number;
   upgradeMilestoneDoublerRank?: number;
   activeLine?: number;
@@ -39,7 +40,7 @@ interface SavedState {
     upgradeCritMultiplierRank?: number;
   }[];
   lastUpdateTimestamp: number;
-  options?: { showFPS?: boolean; sfxEnabled?: boolean; sfxVolume?: number; sfxStyle?: string; locale?: string };
+  options?: { showFPS?: boolean; sfxEnabled?: boolean; sfxVolume?: number; locale?: string };
 }
 
 function migrateGeneratorId(id: string): string {
@@ -59,6 +60,7 @@ function serialize(state: GameState): string {
     milestoneCurrency: state.milestoneCurrency.toString(),
     lineTicketTradeCounts: state.lineTicketTradeCounts,
     upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank,
+    upgradeTicketTradeDoublerRank: state.upgradeTicketTradeDoublerRank,
     upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
     activeLine: state.activeLine,
@@ -175,6 +177,7 @@ function deserialize(raw: string): GameState | null {
         return counts;
       })(),
       upgradeTicketMultiplierRank: Number(saved.upgradeTicketMultiplierRank) || 0,
+      upgradeTicketTradeDoublerRank: Number(saved.upgradeTicketTradeDoublerRank) || 0,
       upgradeGeneratorCostHalfRank: Number(saved.upgradeGeneratorCostHalfRank) || 0,
       upgradeMilestoneDoublerRank: Number(saved.upgradeMilestoneDoublerRank) || 0,
       activeLine: Number(saved.activeLine) || 1,
@@ -184,7 +187,6 @@ function deserialize(raw: string): GameState | null {
         showFPS: shared.showFPS,
         sfxEnabled: shared.sfxEnabled,
         sfxVolume: shared.sfxVolume,
-        sfxStyle: shared.sfxStyle,
         locale: shared.locale,
       },
       lastUpdateTimestamp: saved.lastUpdateTimestamp ?? Date.now(),

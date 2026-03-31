@@ -1,5 +1,6 @@
 import Decimal from "break_eternity.js";
 import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
+import { isLineUnlocked, getLineUnlockRequirement } from "@/store/gameState";
 import { getLineColor, LINE_COLOR_CLASSES, LINE_COUNT } from "@/engine/constants";
 import { getTicketsPerSecond, getTicketTradeThreshold, getMaxAffordableTrades } from "@/engine/upgrades";
 import { formatNumber } from "@/utils/format";
@@ -11,18 +12,22 @@ export function TradesPage() {
   const dispatch = useGameDispatch();
   const t = useT();
 
-  const { lineResources, lineTicketTradeCounts, upgradeTicketMultiplierRank } = useGameSelector((state) => ({
+  const { lineResources, lineTicketTradeCounts, upgradeTicketMultiplierRank, upgradeTicketTradeDoublerRank, unlockedLines } = useGameSelector((state) => ({
     lineResources: state.lineResources,
     lineTicketTradeCounts: state.lineTicketTradeCounts,
     upgradeTicketMultiplierRank: state.upgradeTicketMultiplierRank,
+    upgradeTicketTradeDoublerRank: state.upgradeTicketTradeDoublerRank,
+    unlockedLines: Array.from({ length: LINE_COUNT }, (_, i) => isLineUnlocked(state, i + 1)),
   }), (a, b) =>
     a.lineResources === b.lineResources &&
     a.lineTicketTradeCounts === b.lineTicketTradeCounts &&
-    a.upgradeTicketMultiplierRank === b.upgradeTicketMultiplierRank
+    a.upgradeTicketMultiplierRank === b.upgradeTicketMultiplierRank &&
+    a.upgradeTicketTradeDoublerRank === b.upgradeTicketTradeDoublerRank &&
+    a.unlockedLines.every((v, i) => v === b.unlockedLines[i])
   );
 
   const totalTrades = Object.values(lineTicketTradeCounts).reduce((s, c) => s + c, 0);
-  const ticketsPerSec = getTicketsPerSecond(totalTrades, upgradeTicketMultiplierRank);
+  const ticketsPerSec = getTicketsPerSecond(totalTrades, upgradeTicketMultiplierRank, upgradeTicketTradeDoublerRank);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -31,11 +36,27 @@ export function TradesPage() {
           {Array.from({ length: LINE_COUNT }, (_, i) => i + 1).map((ln) => {
             const lnColor = getLineColor(ln);
             const lnClasses = LINE_COLOR_CLASSES[lnColor];
+            const unlocked = unlockedLines[ln - 1];
+
+            if (!unlocked) {
+              const req = getLineUnlockRequirement(ln);
+              return (
+                <div key={ln} className="flex items-center gap-2 opacity-60">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dashed border-zinc-500 bg-zinc-800/60 text-sm font-bold text-zinc-400">{ln}</div>
+                  <div className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-dashed border-zinc-500 bg-zinc-900/40 px-3 py-3">
+                    <span className="text-xs text-zinc-400">
+                      {req ? t.upgradesPage.requiresGen(req.gen, req.line) : t.upgradesPage.tradeLineLockedDesc}
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
             const lnTradeCount = lineTicketTradeCounts[ln] ?? 0;
             const lnResource = lineResources[ln] ?? Decimal.dZero;
             const lnTradeCost = getTicketTradeThreshold(lnTradeCount);
             const { trades: lnAffordable } = getMaxAffordableTrades(lnTradeCount, lnResource);
-            const nextAfterTrade = getTicketsPerSecond(totalTrades + 1, upgradeTicketMultiplierRank);
+            const nextAfterTrade = getTicketsPerSecond(totalTrades + 1, upgradeTicketMultiplierRank, upgradeTicketTradeDoublerRank);
             return (
               <div key={ln} className="flex items-center gap-2">
                 <div className={`btn-3d ${lnClasses.btn3d} flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${lnClasses.bg} text-sm font-bold text-white`} aria-hidden>{ln}</div>
@@ -69,11 +90,8 @@ export function TradesPage() {
                       type="button"
                       onClick={() => dispatch({ type: "TRADE_BASE_FOR_TICKET_RATE", line: ln })}
                       disabled={lnAffordable <= 0}
-                      className={`relative flex h-9 w-full items-center justify-center overflow-hidden rounded-lg px-3 text-sm font-medium whitespace-nowrap touch-manipulation select-none ${
-                        lnAffordable > 0
-                          ? `btn-3d ${lnClasses.btn3d} ${lnClasses.bg} text-white`
-                          : "btn-3d btn-3d--zinc cursor-default text-zinc-400"
-                      }`}
+                      className={`btn-3d ${lnAffordable > 0 ? lnClasses.btn3d : "btn-3d--zinc"} relative flex h-9 w-full items-center justify-center overflow-hidden rounded-lg px-3 text-sm font-medium text-white whitespace-nowrap touch-manipulation select-none ${lnAffordable <= 0 ? "cursor-default" : ""}`}
+                      style={{ minWidth: BUTTON_WIDTH }}
                     >
                       <div className="absolute inset-0 bg-zinc-700" />
                       <div

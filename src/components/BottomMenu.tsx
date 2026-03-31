@@ -23,7 +23,7 @@ export function BottomMenu({ currentView, onNavigate, options, dispatch }: Botto
           <button
             type="button"
             onClick={() => onNavigate("game")}
-            className="btn-3d btn-3d--zinc flex h-[40px] w-[120px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
+            className="btn-3d btn-3d--violet flex h-[40px] w-[120px] items-center justify-center rounded-md bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-500"
           >
             {t.footer.back}
           </button>

@@ -22,13 +22,15 @@ export function getEffectiveCycleTimeSeconds(
   return Math.max(MIN_CYCLE_SECONDS, reduced);
 }
 
-/** Produção por ciclo efetiva: base * 2^rank (ranques infinitos). */
+/** Produção por ciclo efetiva: base * 2^perGenRank * 2^globalRank. */
 export function getEffectiveProductionPerCycle(
   baseProductionPerCycle: Decimal,
-  upgradeProductionRank: number
+  upgradeProductionRank: number,
+  globalProductionDoublerRank: number = 0
 ): Decimal {
-  if (upgradeProductionRank <= 0) return baseProductionPerCycle;
-  return baseProductionPerCycle.mul(Decimal.pow(Decimal.fromNumber(2), upgradeProductionRank));
+  const totalRank = upgradeProductionRank + globalProductionDoublerRank;
+  if (totalRank <= 0) return baseProductionPerCycle;
+  return baseProductionPerCycle.mul(Decimal.pow(Decimal.fromNumber(2), totalRank));
 }
 
 /** Custo em ◆ para o próximo ranque da melhoria "tempo de ciclo". Base 1, dobra a cada ranque (1, 2, 4, 8…), igual para todos os geradores. */
@@ -124,12 +126,17 @@ export function getCritMultiplier(rank: number): number {
 
 /** Custo em ◆ para "chance de crítico": 1, 2, 4, 8… (dobra por ranque). */
 export function getUpgradeCostCritChance(_generatorNumber: number, currentRank: number): Decimal {
-  return Decimal.fromNumber(2 ** currentRank);
+  return Decimal.fromNumber(25 * 2 ** currentRank);
 }
 
-/** Custo em ◆ para "eficiência do crítico": 1, 2, 4, 8… (dobra por ranque). */
+/** Custo em ◆ para "eficiência do crítico": 50, 100, 200, 400… (dobra por ranque). */
 export function getUpgradeCostCritMultiplier(_generatorNumber: number, currentRank: number): Decimal {
-  return Decimal.fromNumber(2 ** currentRank);
+  return Decimal.fromNumber(50 * 2 ** currentRank);
+}
+
+/** Custo em ◆ para "dobrar produção global": 100, 200, 400, 800… (dobra por ranque). */
+export function getUpgradeCostGlobalProductionDoubler(currentRank: number): Decimal {
+  return Decimal.fromNumber(100 * 2 ** currentRank);
 }
 
 /** Custo em ◆ para "dobrar ◆ por marco": 2, 8, 32, 128… (quadruplica por ranque, base 2). */

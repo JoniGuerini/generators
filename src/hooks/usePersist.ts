@@ -23,6 +23,7 @@ interface SavedState {
   upgradeTicketTradeDoublerRank?: number;
   upgradeGeneratorCostHalfRank?: number;
   upgradeMilestoneDoublerRank?: number;
+  upgradeGlobalProductionDoublerRank?: number;
   activeLine?: number;
   lineStats?: Record<string, { baseResourceProduced: string; milestoneCurrencyEarned: string }>;
   generators: {
@@ -63,6 +64,7 @@ function serialize(state: GameState): string {
     upgradeTicketTradeDoublerRank: state.upgradeTicketTradeDoublerRank,
     upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
+    upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank,
     activeLine: state.activeLine,
     lineStats: Object.fromEntries(
       Object.entries(state.lineStats).map(([k, v]) => [k, {
@@ -180,6 +182,7 @@ function deserialize(raw: string): GameState | null {
       upgradeTicketTradeDoublerRank: Number(saved.upgradeTicketTradeDoublerRank) || 0,
       upgradeGeneratorCostHalfRank: Number(saved.upgradeGeneratorCostHalfRank) || 0,
       upgradeMilestoneDoublerRank: Number(saved.upgradeMilestoneDoublerRank) || 0,
+      upgradeGlobalProductionDoublerRank: Number(saved.upgradeGlobalProductionDoublerRank) || 0,
       activeLine: Number(saved.activeLine) || 1,
       lineStats,
       generators,

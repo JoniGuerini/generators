@@ -43,7 +43,8 @@ export function simulateOfflineProgress(
     );
     const productionPerCycle = getEffectiveProductionPerCycle(
       def.productionPerCycle,
-      gen.upgradeProductionRank
+      gen.upgradeProductionRank,
+      state.upgradeGlobalProductionDoublerRank
     );
     const cycleTimeMs = cycleTimeSec * 1000;
     let progress = gen.cycleProgress + deltaSec / cycleTimeSec;

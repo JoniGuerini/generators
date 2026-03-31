@@ -21,6 +21,7 @@ import {
   getUpgradeCostTicketTradeDoubler,
   getMaxAffordableTrades,
   getUpgradeCostMilestoneDoubler,
+  getUpgradeCostGlobalProductionDoubler,
   getMilestoneRewardMultiplier,
   getCritChance,
   getCritMultiplier,
@@ -41,6 +42,7 @@ export type GameAction =
   | { type: "TRADE_BASE_FOR_TICKET_RATE"; line: number }
   | { type: "BUY_GENERATOR_COST_HALF_UPGRADE" }
   | { type: "BUY_MILESTONE_DOUBLER_UPGRADE" }
+  | { type: "BUY_GLOBAL_PRODUCTION_DOUBLER_UPGRADE" }
   | { type: "TOGGLE_FPS" }
   | { type: "TOGGLE_SFX" }
   | { type: "SET_SFX_VOLUME"; volume: number }
@@ -72,7 +74,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         );
         const productionPerCycle = getEffectiveProductionPerCycle(
           def.productionPerCycle,
-          gen.upgradeProductionRank
+          gen.upgradeProductionRank,
+          state.upgradeGlobalProductionDoublerRank
         );
         
         let progress = gen.cycleProgress + deltaSec / cycleTimeSec;
@@ -387,6 +390,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         milestoneCurrency: state.milestoneCurrency.sub(cost),
         upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank + 1,
+      };
+    }
+
+    case "BUY_GLOBAL_PRODUCTION_DOUBLER_UPGRADE": {
+      const cost = getUpgradeCostGlobalProductionDoubler(state.upgradeGlobalProductionDoublerRank);
+      if (state.milestoneCurrency.lt(cost)) return state;
+      return {
+        ...state,
+        milestoneCurrency: state.milestoneCurrency.sub(cost),
+        upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank + 1,
       };
     }
 

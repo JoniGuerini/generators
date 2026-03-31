@@ -87,6 +87,7 @@ export const en: Translations = {
     halfCostAll: "Cost ÷2 (all generators)",
     doubleTradeValue: "Double ▲/s per trade",
     perTrade: "per trade",
+    doubleProductionGlobal: "Double production (all generators)",
     doubleMilestoneReward: "Double ◆ per milestone",
     perGenerator: "Per generator",
     cycleTime: "Cycle time",

@@ -31,6 +31,7 @@ export interface GameState {
   upgradeTicketTradeDoublerRank: number;
   upgradeGeneratorCostHalfRank: number;
   upgradeMilestoneDoublerRank: number;
+  upgradeGlobalProductionDoublerRank: number;
   generators: GeneratorState[];
   activeLine: number;
   lineStats: Record<number, LineStats>;
@@ -121,6 +122,7 @@ export function getInitialState(): GameState {
     upgradeTicketTradeDoublerRank: 0,
     upgradeGeneratorCostHalfRank: 0,
     upgradeMilestoneDoublerRank: 0,
+    upgradeGlobalProductionDoublerRank: 0,
     generators: GENERATOR_IDS.map((id) => {
       const gen = initialGeneratorState(id);
       if (parseGeneratorId(id).gen === 1) return { ...gen, everOwned: true };

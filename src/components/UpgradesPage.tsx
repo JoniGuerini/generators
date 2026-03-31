@@ -16,6 +16,7 @@ import {
   getUpgradeCostTicketTradeDoubler,
   getTicketTradeValue,
   getUpgradeCostMilestoneDoubler,
+  getUpgradeCostGlobalProductionDoubler,
   getMilestoneRewardMultiplier,
   getCritChance,
   getCritMultiplier,
@@ -157,6 +158,7 @@ export function UpgradesPage() {
     upgradeTicketTradeDoublerRank,
     upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank,
+    upgradeGlobalProductionDoublerRank,
     generatorsData,
     unlockedLines,
   } = useGameSelector((state) => {
@@ -179,6 +181,7 @@ export function UpgradesPage() {
       upgradeTicketTradeDoublerRank: state.upgradeTicketTradeDoublerRank,
       upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
       upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
+      upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank,
       generatorsData,
       unlockedLines: Array.from({ length: LINE_COUNT }, (_, i) => isLineUnlocked(state, i + 1)),
     };
@@ -189,6 +192,7 @@ export function UpgradesPage() {
     a.upgradeTicketTradeDoublerRank === b.upgradeTicketTradeDoublerRank &&
     a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
     a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
+    a.upgradeGlobalProductionDoublerRank === b.upgradeGlobalProductionDoublerRank &&
     a.everOwnedSet.size === b.everOwnedSet.size &&
     [...a.everOwnedSet].every(id => b.everOwnedSet.has(id)) &&
     a.generatorsData.length === b.generatorsData.length &&
@@ -284,63 +288,79 @@ export function UpgradesPage() {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {tab === "geral" && (
-          <div className="mx-auto max-w-4xl space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-lg text-violet-400" aria-hidden>½</div>
-              {(() => {
-                const rank = upgradeGeneratorCostHalfRank;
-                const costHalf = getUpgradeCostGeneratorCostHalf(rank);
-                const canBuyHalf = milestoneCurrency.gte(costHalf);
-                return (
-                  <UpgradeRow
-                    flexible
-                    label={
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.halfCostAll}</span>
-                    }
-                    sublabel={`${rank}`}
-                    cost={`◆ ${formatNumber(costHalf)}`}
-                    canBuy={canBuyHalf}
-                    onBuy={() =>
-                      dispatch({ type: "BUY_GENERATOR_COST_HALF_UPGRADE" })
-                    }
-                    buttonLabel={`◆ ${formatNumber(costHalf)}`}
-                  />
-                );
-              })()}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/20 text-sm font-bold text-violet-400" aria-hidden>×2</div>
-              {(() => {
-                const rank = upgradeMilestoneDoublerRank;
-                const costDoubler = getUpgradeCostMilestoneDoubler(rank);
-                const canBuyDoubler = milestoneCurrency.gte(costDoubler);
-                const currentMult = getMilestoneRewardMultiplier(rank);
-                const nextMult = getMilestoneRewardMultiplier(rank + 1);
-                return (
-                  <UpgradeRow
-                    flexible
-                    label={
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500"><HighlightCoin text={t.upgradesPage.doubleMilestoneReward} /></span>
-                        <div className="flex items-center gap-1.5 text-sm font-medium">
-                          <span className="text-zinc-400">×{formatNumber(Decimal.fromNumber(currentMult))}</span>
-                          <span className="text-violet-400/80">→</span>
-                          <span className="text-white">×{formatNumber(Decimal.fromNumber(nextMult))}</span>
-                        </div>
+          <div className="flex flex-wrap gap-2">
+            {(() => {
+              const rank = upgradeGeneratorCostHalfRank;
+              const costHalf = getUpgradeCostGeneratorCostHalf(rank);
+              const canBuyHalf = milestoneCurrency.gte(costHalf);
+              return (
+                <UpgradeRow
+                  flexible
+                  label={
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.halfCostAll}</span>
+                  }
+                  sublabel={`${rank}`}
+                  cost={`◆ ${formatNumber(costHalf)}`}
+                  canBuy={canBuyHalf}
+                  onBuy={() => dispatch({ type: "BUY_GENERATOR_COST_HALF_UPGRADE" })}
+                  buttonLabel={`◆ ${formatNumber(costHalf)}`}
+                />
+              );
+            })()}
+            {(() => {
+              const rank = upgradeMilestoneDoublerRank;
+              const costDoubler = getUpgradeCostMilestoneDoubler(rank);
+              const canBuyDoubler = milestoneCurrency.gte(costDoubler);
+              const currentMult = getMilestoneRewardMultiplier(rank);
+              const nextMult = getMilestoneRewardMultiplier(rank + 1);
+              return (
+                <UpgradeRow
+                  flexible
+                  label={
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500"><HighlightCoin text={t.upgradesPage.doubleMilestoneReward} /></span>
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <span className="text-zinc-400">×{formatNumber(Decimal.fromNumber(currentMult))}</span>
+                        <span className="text-violet-400/80">→</span>
+                        <span className="text-white">×{formatNumber(Decimal.fromNumber(nextMult))}</span>
                       </div>
-                    }
-                    sublabel={`${rank}`}
-                    cost={`◆ ${formatNumber(costDoubler)}`}
-                    canBuy={canBuyDoubler}
-                    onBuy={() =>
-                      dispatch({ type: "BUY_MILESTONE_DOUBLER_UPGRADE" })
-                    }
-                    buttonLabel={`◆ ${formatNumber(costDoubler)}`}
-                  />
-                );
-              })()}
-            </div>
+                    </div>
+                  }
+                  sublabel={`${rank}`}
+                  cost={`◆ ${formatNumber(costDoubler)}`}
+                  canBuy={canBuyDoubler}
+                  onBuy={() => dispatch({ type: "BUY_MILESTONE_DOUBLER_UPGRADE" })}
+                  buttonLabel={`◆ ${formatNumber(costDoubler)}`}
+                />
+              );
+            })()}
+            {(() => {
+              const rank = upgradeGlobalProductionDoublerRank;
+              const cost = getUpgradeCostGlobalProductionDoubler(rank);
+              const canBuy = milestoneCurrency.gte(cost);
+              const currentMult = 2 ** rank;
+              const nextMult = 2 ** (rank + 1);
+              return (
+                <UpgradeRow
+                  flexible
+                  label={
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.doubleProductionGlobal}</span>
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <span className="text-zinc-400">×{formatNumber(Decimal.fromNumber(currentMult))}</span>
+                        <span className="text-violet-400/80">→</span>
+                        <span className="text-white">×{formatNumber(Decimal.fromNumber(nextMult))}</span>
+                      </div>
+                    </div>
+                  }
+                  sublabel={`${rank}`}
+                  cost={`◆ ${formatNumber(cost)}`}
+                  canBuy={canBuy}
+                  onBuy={() => dispatch({ type: "BUY_GLOBAL_PRODUCTION_DOUBLER_UPGRADE" })}
+                  buttonLabel={`◆ ${formatNumber(cost)}`}
+                />
+              );
+            })()}
           </div>
         )}
 
@@ -443,8 +463,8 @@ export function UpgradesPage() {
               const nextCycle = cycleRank < maxCycleRank
                 ? getEffectiveCycleTimeSeconds(def.cycleTimeSeconds, cycleRank + 1)
                 : currentCycle;
-              const currentProd = getEffectiveProductionPerCycle(def.productionPerCycle, prodRank);
-              const nextProd = getEffectiveProductionPerCycle(def.productionPerCycle, prodRank + 1);
+              const currentProd = getEffectiveProductionPerCycle(def.productionPerCycle, prodRank, upgradeGlobalProductionDoublerRank);
+              const nextProd = getEffectiveProductionPerCycle(def.productionPerCycle, prodRank + 1, upgradeGlobalProductionDoublerRank);
 
               return (
                 <li key={id} className="flex items-center gap-2">

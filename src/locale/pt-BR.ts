@@ -16,6 +16,10 @@ export const ptBR = {
     trades: "Trocas",
     back: "Voltar",
   },
+  tradesPage: {
+    tradeAll: "Realizar todas as trocas",
+    noTrades: "Nenhuma troca disponível",
+  },
   settings: {
     menu: "Menu",
     general: "Geral",
@@ -86,6 +90,7 @@ export const ptBR = {
     doubleTradeValue: "Dobrar ▲/s por troca",
     perTrade: "por troca",
     doubleProductionGlobal: "Dobrar produção (todos os geradores)",
+    doubleProductionLine: "Dobrar produção (linha)",
     doubleMilestoneReward: "Dobrar ◆ por marco",
     perGenerator: "Por gerador",
     cycleTime: "Tempo de ciclo",

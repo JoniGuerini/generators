@@ -22,13 +22,14 @@ export function getEffectiveCycleTimeSeconds(
   return Math.max(MIN_CYCLE_SECONDS, reduced);
 }
 
-/** Produção por ciclo efetiva: base * 2^perGenRank * 2^globalRank. */
+/** Produção por ciclo efetiva: base * 2^(perGenRank + globalRank + lineRank). */
 export function getEffectiveProductionPerCycle(
   baseProductionPerCycle: Decimal,
   upgradeProductionRank: number,
-  globalProductionDoublerRank: number = 0
+  globalProductionDoublerRank: number = 0,
+  lineProductionDoublerRank: number = 0
 ): Decimal {
-  const totalRank = upgradeProductionRank + globalProductionDoublerRank;
+  const totalRank = upgradeProductionRank + globalProductionDoublerRank + lineProductionDoublerRank;
   if (totalRank <= 0) return baseProductionPerCycle;
   return baseProductionPerCycle.mul(Decimal.pow(Decimal.fromNumber(2), totalRank));
 }
@@ -97,18 +98,19 @@ export function getUpgradeCostTicketMultiplier(currentRank: number): Decimal {
   return Decimal.pow(Decimal.fromNumber(4), Math.max(0, currentRank));
 }
 
-/** Custo efetivo para comprar gerador (cada ranque global reduz pela metade). */
+/** Custo efetivo para comprar gerador (cada ranque global reduz pela metade, mínimo 1). */
 export function getEffectiveGeneratorCost(
   baseCost: Decimal,
   upgradeGeneratorCostHalfRank: number
 ): Decimal {
   if (upgradeGeneratorCostHalfRank <= 0) return baseCost;
-  return baseCost.div(Decimal.pow(Decimal.fromNumber(2), upgradeGeneratorCostHalfRank));
+  const reduced = baseCost.div(Decimal.pow(Decimal.fromNumber(2), upgradeGeneratorCostHalfRank));
+  return Decimal.max(Decimal.dOne, reduced.floor());
 }
 
 /** Custo em ◆ para o próximo ranque da melhoria global "custo de compra ÷2": 1, 2, 4, 8… (dobra por ranque). */
 export function getUpgradeCostGeneratorCostHalf(currentRank: number): Decimal {
-  return Decimal.pow(Decimal.fromNumber(2), Math.max(0, currentRank));
+  return Decimal.fromNumber(200).mul(Decimal.pow(Decimal.fromNumber(3), Math.max(0, currentRank)));
 }
 
 /** Máximo de ranques da melhoria "chance de crítico": 40 ranques = 100%. */
@@ -139,9 +141,14 @@ export function getUpgradeCostGlobalProductionDoubler(currentRank: number): Deci
   return Decimal.fromNumber(100 * 2 ** currentRank);
 }
 
+/** Custo em ◆ para "dobrar produção da linha": 50, 100, 200, 400… (dobra por ranque). */
+export function getUpgradeCostLineProductionDoubler(currentRank: number): Decimal {
+  return Decimal.fromNumber(50 * 2 ** currentRank);
+}
+
 /** Custo em ◆ para "dobrar ◆ por marco": 2, 8, 32, 128… (quadruplica por ranque, base 2). */
 export function getUpgradeCostMilestoneDoubler(currentRank: number): Decimal {
-  return Decimal.fromNumber(2).mul(Decimal.pow(Decimal.fromNumber(4), Math.max(0, currentRank)));
+  return Decimal.fromNumber(50 * 2 ** currentRank);
 }
 
 /** Multiplicador efetivo de ◆ por marco: 2^rank. */

@@ -24,6 +24,7 @@ interface SavedState {
   upgradeGeneratorCostHalfRank?: number;
   upgradeMilestoneDoublerRank?: number;
   upgradeGlobalProductionDoublerRank?: number;
+  upgradeLineProductionDoublerRanks?: Record<string, number>;
   activeLine?: number;
   lineStats?: Record<string, { baseResourceProduced: string; milestoneCurrencyEarned: string }>;
   generators: {
@@ -65,6 +66,7 @@ function serialize(state: GameState): string {
     upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
     upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank,
+    upgradeLineProductionDoublerRanks: state.upgradeLineProductionDoublerRanks,
     activeLine: state.activeLine,
     lineStats: Object.fromEntries(
       Object.entries(state.lineStats).map(([k, v]) => [k, {
@@ -183,6 +185,16 @@ function deserialize(raw: string): GameState | null {
       upgradeGeneratorCostHalfRank: Number(saved.upgradeGeneratorCostHalfRank) || 0,
       upgradeMilestoneDoublerRank: Number(saved.upgradeMilestoneDoublerRank) || 0,
       upgradeGlobalProductionDoublerRank: Number(saved.upgradeGlobalProductionDoublerRank) || 0,
+      upgradeLineProductionDoublerRanks: (() => {
+        if (saved.upgradeLineProductionDoublerRanks && typeof saved.upgradeLineProductionDoublerRanks === "object") {
+          const ranks: Record<number, number> = {};
+          for (const [k, v] of Object.entries(saved.upgradeLineProductionDoublerRanks)) {
+            ranks[Number(k)] = Number(v) || 0;
+          }
+          return ranks;
+        }
+        return { ...initial.upgradeLineProductionDoublerRanks };
+      })(),
       activeLine: Number(saved.activeLine) || 1,
       lineStats,
       generators,

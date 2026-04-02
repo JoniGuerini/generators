@@ -29,10 +29,19 @@ export function TradesPage() {
   const totalTrades = Object.values(lineTicketTradeCounts).reduce((s, c) => s + c, 0);
   const ticketsPerSec = getTicketsPerSecond(totalTrades, upgradeTicketMultiplierRank, upgradeTicketTradeDoublerRank);
 
+  let totalPendingTrades = 0;
+  for (let ln = 1; ln <= LINE_COUNT; ln++) {
+    if (!unlockedLines[ln - 1]) continue;
+    const count = lineTicketTradeCounts[ln] ?? 0;
+    const resource = lineResources[ln] ?? Decimal.dZero;
+    const { trades } = getMaxAffordableTrades(count, resource);
+    totalPendingTrades += trades;
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pt-3 pb-4 scrollbar-none">
-        <div className="mx-auto max-w-5xl grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {Array.from({ length: LINE_COUNT }, (_, i) => i + 1).map((ln) => {
             const lnColor = getLineColor(ln);
             const lnClasses = LINE_COLOR_CLASSES[lnColor];
@@ -108,6 +117,21 @@ export function TradesPage() {
             );
           })}
         </div>
+
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "TRADE_ALL_LINES" })}
+          disabled={totalPendingTrades <= 0}
+          className={`mt-3 w-full rounded-lg py-2.5 text-sm font-medium ${
+            totalPendingTrades > 0
+              ? "btn-3d btn-3d--amber bg-amber-600 text-white hover:bg-amber-500"
+              : "btn-3d btn-3d--zinc cursor-default bg-zinc-700 text-zinc-500"
+          }`}
+        >
+          {totalPendingTrades > 0
+            ? `${t.tradesPage.tradeAll} (+${totalPendingTrades} ▲/s)`
+            : t.tradesPage.noTrades}
+        </button>
       </div>
     </div>
   );

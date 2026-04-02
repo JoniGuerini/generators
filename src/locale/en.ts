@@ -18,6 +18,10 @@ export const en: Translations = {
     trades: "Trades",
     back: "Back",
   },
+  tradesPage: {
+    tradeAll: "Perform all trades",
+    noTrades: "No trades available",
+  },
   settings: {
     menu: "Menu",
     general: "General",
@@ -88,6 +92,7 @@ export const en: Translations = {
     doubleTradeValue: "Double ▲/s per trade",
     perTrade: "per trade",
     doubleProductionGlobal: "Double production (all generators)",
+    doubleProductionLine: "Double production (line)",
     doubleMilestoneReward: "Double ◆ per milestone",
     perGenerator: "Per generator",
     cycleTime: "Cycle time",

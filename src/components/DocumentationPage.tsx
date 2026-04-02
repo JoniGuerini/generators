@@ -247,7 +247,7 @@ export function DocumentationPage() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-2 text-zinc-300">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-2 text-zinc-300 scrollbar-none">
         {tab === "basics" && <BasicsTab />}
         {tab === "currencies" && <CurrenciesTab />}
         {tab === "generators" && <GeneratorsTab />}

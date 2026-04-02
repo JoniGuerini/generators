@@ -58,6 +58,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank,
     upgradeGlobalProductionDoublerRank,
+    upgradeLineProductionDoublerRank,
     prevGenQuantity,
     canBuy,
     maxAffordable,
@@ -108,6 +109,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       upgradeGeneratorCostHalfRank,
       upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
       upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank,
+      upgradeLineProductionDoublerRank: state.upgradeLineProductionDoublerRanks[genLine] ?? 0,
       prevGenQuantity,
       canBuy,
       maxAffordable,
@@ -123,6 +125,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
       a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
       a.upgradeGlobalProductionDoublerRank === b.upgradeGlobalProductionDoublerRank &&
+      a.upgradeLineProductionDoublerRank === b.upgradeLineProductionDoublerRank &&
       a.canBuy === b.canBuy &&
       a.isUnlocked === b.isUnlocked &&
       a.unlockPrevQty.equals(b.unlockPrevQty) &&
@@ -190,7 +193,8 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   const productionPerCycle = getEffectiveProductionPerCycle(
     def.productionPerCycle,
     gen.upgradeProductionRank,
-    upgradeGlobalProductionDoublerRank
+    upgradeGlobalProductionDoublerRank,
+    upgradeLineProductionDoublerRank
   );
   const effectiveCost = getEffectiveGeneratorCost(
     def.cost,

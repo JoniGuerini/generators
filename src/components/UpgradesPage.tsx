@@ -17,6 +17,7 @@ import {
   getTicketTradeValue,
   getUpgradeCostMilestoneDoubler,
   getUpgradeCostGlobalProductionDoubler,
+  getUpgradeCostLineProductionDoubler,
   getMilestoneRewardMultiplier,
   getCritChance,
   getCritMultiplier,
@@ -159,6 +160,7 @@ export function UpgradesPage() {
     upgradeGeneratorCostHalfRank,
     upgradeMilestoneDoublerRank,
     upgradeGlobalProductionDoublerRank,
+    upgradeLineProductionDoublerRanks,
     generatorsData,
     unlockedLines,
   } = useGameSelector((state) => {
@@ -182,6 +184,7 @@ export function UpgradesPage() {
       upgradeGeneratorCostHalfRank: state.upgradeGeneratorCostHalfRank,
       upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
       upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank,
+      upgradeLineProductionDoublerRanks: state.upgradeLineProductionDoublerRanks,
       generatorsData,
       unlockedLines: Array.from({ length: LINE_COUNT }, (_, i) => isLineUnlocked(state, i + 1)),
     };
@@ -193,6 +196,7 @@ export function UpgradesPage() {
     a.upgradeGeneratorCostHalfRank === b.upgradeGeneratorCostHalfRank &&
     a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
     a.upgradeGlobalProductionDoublerRank === b.upgradeGlobalProductionDoublerRank &&
+    a.upgradeLineProductionDoublerRanks === b.upgradeLineProductionDoublerRanks &&
     a.everOwnedSet.size === b.everOwnedSet.size &&
     [...a.everOwnedSet].every(id => b.everOwnedSet.has(id)) &&
     a.generatorsData.length === b.generatorsData.length &&
@@ -286,7 +290,7 @@ export function UpgradesPage() {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 scrollbar-none">
         {tab === "geral" && (
           <div className="flex flex-wrap gap-2">
             {(() => {
@@ -427,6 +431,40 @@ export function UpgradesPage() {
 
         {tab === "geradores" && unlockedLines[upgradeLine - 1] && (
           <ul className="space-y-2">
+            {(() => {
+              const lineColor = getLineColor(upgradeLine);
+              const lineClasses = LINE_COLOR_CLASSES[lineColor];
+              const lineRank = upgradeLineProductionDoublerRanks[upgradeLine] ?? 0;
+              const lineCost = getUpgradeCostLineProductionDoubler(lineRank);
+              const canBuyLine = milestoneCurrency.gte(lineCost);
+              const currentLineMult = 2 ** lineRank;
+              const nextLineMult = 2 ** (lineRank + 1);
+              return (
+                <li className="flex items-center gap-2">
+                  <div className={`btn-3d ${lineClasses.btn3d} flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${lineClasses.bg} text-sm font-bold text-white`} aria-hidden>
+                    {upgradeLine}
+                  </div>
+                  <UpgradeRow
+                    flexible
+                    label={
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.doubleProductionLine}</span>
+                        <div className="flex items-center gap-1.5 text-sm font-medium">
+                          <span className="text-zinc-400">×{formatNumber(Decimal.fromNumber(currentLineMult))}</span>
+                          <span className="text-violet-400/80">→</span>
+                          <span className="text-white">×{formatNumber(Decimal.fromNumber(nextLineMult))}</span>
+                        </div>
+                      </div>
+                    }
+                    sublabel={`${lineRank}`}
+                    cost={`◆ ${formatNumber(lineCost)}`}
+                    canBuy={canBuyLine}
+                    onBuy={() => dispatch({ type: "BUY_LINE_PRODUCTION_DOUBLER_UPGRADE", line: upgradeLine })}
+                    buttonLabel={`◆ ${formatNumber(lineCost)}`}
+                  />
+                </li>
+              );
+            })()}
             {allLineGeneratorIds.map((id) => {
               const def = GENERATOR_DEFS[id];
               const gen = generatorsData.find((g) => g.id === id);
@@ -463,8 +501,9 @@ export function UpgradesPage() {
               const nextCycle = cycleRank < maxCycleRank
                 ? getEffectiveCycleTimeSeconds(def.cycleTimeSeconds, cycleRank + 1)
                 : currentCycle;
-              const currentProd = getEffectiveProductionPerCycle(def.productionPerCycle, prodRank, upgradeGlobalProductionDoublerRank);
-              const nextProd = getEffectiveProductionPerCycle(def.productionPerCycle, prodRank + 1, upgradeGlobalProductionDoublerRank);
+              const lineDoublerRank = upgradeLineProductionDoublerRanks[lineNum] ?? 0;
+              const currentProd = getEffectiveProductionPerCycle(def.productionPerCycle, prodRank, upgradeGlobalProductionDoublerRank, lineDoublerRank);
+              const nextProd = getEffectiveProductionPerCycle(def.productionPerCycle, prodRank + 1, upgradeGlobalProductionDoublerRank, lineDoublerRank);
 
               return (
                 <li key={id} className="flex items-center gap-2">

@@ -1,7 +1,12 @@
+import Decimal from "break_eternity.js";
 import type { MainView } from "./GameScreen";
 import { SettingsMenu } from "./SettingsMenu";
 import { BuyModeSelect } from "./BuyModeSelect";
 import { useT } from "@/locale";
+import { useGameSelector } from "@/store/useGameStore";
+import { isLineUnlocked } from "@/store/gameState";
+import { LINE_COUNT } from "@/engine/constants";
+import { getMaxAffordableTrades } from "@/engine/upgrades";
 
 interface BottomMenuProps {
   currentView: MainView;
@@ -13,6 +18,18 @@ interface BottomMenuProps {
 export function BottomMenu({ currentView, onNavigate, options, dispatch }: BottomMenuProps) {
   const t = useT();
   const isSubPage = currentView !== "game";
+
+  const totalPendingTrades = useGameSelector((state) => {
+    let total = 0;
+    for (let ln = 1; ln <= LINE_COUNT; ln++) {
+      if (!isLineUnlocked(state, ln)) continue;
+      const count = state.lineTicketTradeCounts[ln] ?? 0;
+      const resource = state.lineResources[ln] ?? Decimal.dZero;
+      const { trades } = getMaxAffordableTrades(count, resource);
+      total += trades;
+    }
+    return total;
+  });
 
   return (
     <footer className="sticky bottom-0 z-20 flex items-center bg-[#0D0D0D] px-2 py-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
@@ -29,13 +46,20 @@ export function BottomMenu({ currentView, onNavigate, options, dispatch }: Botto
           </button>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={() => onNavigate("trades")}
-              className="btn-3d btn-3d--zinc flex h-[40px] w-[120px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
-            >
-              {t.footer.trades}
-            </button>
+            <div className="relative">
+              {totalPendingTrades > 0 && (
+                <div className="absolute -right-1.5 -top-1.5 z-10 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1">
+                  <span className="text-[10px] font-bold tabular-nums text-white">{totalPendingTrades}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => onNavigate("trades")}
+                className="btn-3d btn-3d--zinc flex h-[40px] w-[120px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
+              >
+                {t.footer.trades}
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => onNavigate("upgrades")}

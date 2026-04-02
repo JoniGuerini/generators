@@ -1,6 +1,6 @@
 import Decimal from "break_eternity.js";
 import type { GameState } from "./gameState";
-import { getInitialState, getTotalTicketTrades } from "./gameState";
+import { getInitialState, getTotalTicketTrades, isLineUnlocked } from "./gameState";
 import { GENERATOR_DEFS, parseGeneratorId, getUnlockRequirement } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import {
@@ -22,6 +22,7 @@ import {
   getMaxAffordableTrades,
   getUpgradeCostMilestoneDoubler,
   getUpgradeCostGlobalProductionDoubler,
+  getUpgradeCostLineProductionDoubler,
   getMilestoneRewardMultiplier,
   getCritChance,
   getCritMultiplier,
@@ -40,9 +41,11 @@ export type GameAction =
   | { type: "BUY_TICKET_MULTIPLIER_UPGRADE" }
   | { type: "BUY_TICKET_TRADE_DOUBLER_UPGRADE" }
   | { type: "TRADE_BASE_FOR_TICKET_RATE"; line: number }
+  | { type: "TRADE_ALL_LINES" }
   | { type: "BUY_GENERATOR_COST_HALF_UPGRADE" }
   | { type: "BUY_MILESTONE_DOUBLER_UPGRADE" }
   | { type: "BUY_GLOBAL_PRODUCTION_DOUBLER_UPGRADE" }
+  | { type: "BUY_LINE_PRODUCTION_DOUBLER_UPGRADE"; line: number }
   | { type: "TOGGLE_FPS" }
   | { type: "TOGGLE_SFX" }
   | { type: "SET_SFX_VOLUME"; volume: number }
@@ -72,10 +75,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           def.cycleTimeSeconds,
           gen.upgradeCycleSpeedRank
         );
+        const { line: genLine } = parseGeneratorId(gen.id);
+        const lineDoublerRank = state.upgradeLineProductionDoublerRanks[genLine] ?? 0;
         const productionPerCycle = getEffectiveProductionPerCycle(
           def.productionPerCycle,
           gen.upgradeProductionRank,
-          state.upgradeGlobalProductionDoublerRank
+          state.upgradeGlobalProductionDoublerRank,
+          lineDoublerRank
         );
         
         let progress = gen.cycleProgress + deltaSec / cycleTimeSec;
@@ -403,6 +409,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case "BUY_LINE_PRODUCTION_DOUBLER_UPGRADE": {
+      const currentRank = state.upgradeLineProductionDoublerRanks[action.line] ?? 0;
+      const cost = getUpgradeCostLineProductionDoubler(currentRank);
+      if (state.milestoneCurrency.lt(cost)) return state;
+      return {
+        ...state,
+        milestoneCurrency: state.milestoneCurrency.sub(cost),
+        upgradeLineProductionDoublerRanks: {
+          ...state.upgradeLineProductionDoublerRanks,
+          [action.line]: currentRank + 1,
+        },
+      };
+    }
+
     case "TRADE_BASE_FOR_TICKET_RATE": {
       const tradeLineRes = state.lineResources[action.line] ?? Decimal.dZero;
       const lineTradeCount = state.lineTicketTradeCounts[action.line] ?? 0;
@@ -413,6 +433,25 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         lineResources: { ...state.lineResources, [action.line]: tradeLineRes.sub(totalCost) },
         lineTicketTradeCounts: { ...state.lineTicketTradeCounts, [action.line]: lineTradeCount + trades },
       };
+    }
+
+    case "TRADE_ALL_LINES": {
+      const newResources = { ...state.lineResources };
+      const newCounts = { ...state.lineTicketTradeCounts };
+      let anyTrade = false;
+      for (let ln = 1; ln <= 10; ln++) {
+        if (!isLineUnlocked(state, ln)) continue;
+        const res = newResources[ln] ?? Decimal.dZero;
+        const count = newCounts[ln] ?? 0;
+        const { trades, totalCost } = getMaxAffordableTrades(count, res);
+        if (trades > 0) {
+          newResources[ln] = res.sub(totalCost);
+          newCounts[ln] = count + trades;
+          anyTrade = true;
+        }
+      }
+      if (!anyTrade) return state;
+      return { ...state, lineResources: newResources, lineTicketTradeCounts: newCounts };
     }
 
     case "CLAIM_MILESTONES": {

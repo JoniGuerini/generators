@@ -32,6 +32,7 @@ export interface GameState {
   upgradeGeneratorCostHalfRank: number;
   upgradeMilestoneDoublerRank: number;
   upgradeGlobalProductionDoublerRank: number;
+  upgradeLineProductionDoublerRanks: Record<number, number>;
   generators: GeneratorState[];
   activeLine: number;
   lineStats: Record<number, LineStats>;
@@ -123,6 +124,9 @@ export function getInitialState(): GameState {
     upgradeGeneratorCostHalfRank: 0,
     upgradeMilestoneDoublerRank: 0,
     upgradeGlobalProductionDoublerRank: 0,
+    upgradeLineProductionDoublerRanks: Object.fromEntries(
+      Array.from({ length: LINE_COUNT }, (_, i) => [i + 1, 0])
+    ),
     generators: GENERATOR_IDS.map((id) => {
       const gen = initialGeneratorState(id);
       if (parseGeneratorId(id).gen === 1) return { ...gen, everOwned: true };

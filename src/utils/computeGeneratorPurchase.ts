@@ -74,12 +74,14 @@ export function computeGeneratorPurchase(
   if (!gen) return { amount: 0, canPurchase: false };
 
   const half = state.upgradeGeneratorCostHalfRank;
-  const effectiveCost = getEffectiveGeneratorCost(def.cost, half);
+  const genLine = parseGeneratorId(id).line;
+  const lineHalf = state.upgradeLineCostHalfRanks[genLine] ?? 0;
+  const effectiveCost = getEffectiveGeneratorCost(def.cost, half, lineHalf);
   const effectiveCostPrev = getEffectiveGeneratorCost(
     def.costPreviousGenerator,
-    half
+    half,
+    lineHalf
   );
-  const genLine = parseGeneratorId(id).line;
   const lineResource = state.lineResources[genLine] ?? Decimal.dZero;
   const ticketCurrency = state.ticketCurrency;
   const prevGenQuantity =

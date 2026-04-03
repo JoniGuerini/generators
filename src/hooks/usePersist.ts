@@ -25,6 +25,7 @@ interface SavedState {
   upgradeMilestoneDoublerRank?: number;
   upgradeGlobalProductionDoublerRank?: number;
   upgradeLineProductionDoublerRanks?: Record<string, number>;
+  upgradeLineCostHalfRanks?: Record<string, number>;
   activeLine?: number;
   lineStats?: Record<string, { baseResourceProduced: string; milestoneCurrencyEarned: string }>;
   generators: {
@@ -67,6 +68,7 @@ function serialize(state: GameState): string {
     upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
     upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank,
     upgradeLineProductionDoublerRanks: state.upgradeLineProductionDoublerRanks,
+    upgradeLineCostHalfRanks: state.upgradeLineCostHalfRanks,
     activeLine: state.activeLine,
     lineStats: Object.fromEntries(
       Object.entries(state.lineStats).map(([k, v]) => [k, {
@@ -194,6 +196,16 @@ function deserialize(raw: string): GameState | null {
           return ranks;
         }
         return { ...initial.upgradeLineProductionDoublerRanks };
+      })(),
+      upgradeLineCostHalfRanks: (() => {
+        if (saved.upgradeLineCostHalfRanks && typeof saved.upgradeLineCostHalfRanks === "object") {
+          const ranks: Record<number, number> = {};
+          for (const [k, v] of Object.entries(saved.upgradeLineCostHalfRanks)) {
+            ranks[Number(k)] = Number(v) || 0;
+          }
+          return ranks;
+        }
+        return { ...initial.upgradeLineCostHalfRanks };
       })(),
       activeLine: Number(saved.activeLine) || 1,
       lineStats,

@@ -59,6 +59,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     upgradeMilestoneDoublerRank,
     upgradeGlobalProductionDoublerRank,
     upgradeLineProductionDoublerRank,
+    upgradeLineCostHalfRank,
     prevGenQuantity,
     canBuy,
     maxAffordable,
@@ -76,8 +77,9 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       ? state.generators.find((g) => g.id === def.produces)?.quantity 
       : undefined;
 
-    const effectiveCost = getEffectiveGeneratorCost(def.cost, upgradeGeneratorCostHalfRank);
-    const effectiveCostPrev = getEffectiveGeneratorCost(def.costPreviousGenerator, upgradeGeneratorCostHalfRank);
+    const lineCostHalfRank = state.upgradeLineCostHalfRanks[genLine] ?? 0;
+    const effectiveCost = getEffectiveGeneratorCost(def.cost, upgradeGeneratorCostHalfRank, lineCostHalfRank);
+    const effectiveCostPrev = getEffectiveGeneratorCost(def.costPreviousGenerator, upgradeGeneratorCostHalfRank, lineCostHalfRank);
 
     // Calc max affordable
     const ticketCostPerUnit = parseGeneratorId(id).line;
@@ -110,6 +112,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
       upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank,
       upgradeLineProductionDoublerRank: state.upgradeLineProductionDoublerRanks[genLine] ?? 0,
+      upgradeLineCostHalfRank: state.upgradeLineCostHalfRanks[genLine] ?? 0,
       prevGenQuantity,
       canBuy,
       maxAffordable,
@@ -126,6 +129,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
       a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
       a.upgradeGlobalProductionDoublerRank === b.upgradeGlobalProductionDoublerRank &&
       a.upgradeLineProductionDoublerRank === b.upgradeLineProductionDoublerRank &&
+      a.upgradeLineCostHalfRank === b.upgradeLineCostHalfRank &&
       a.canBuy === b.canBuy &&
       a.isUnlocked === b.isUnlocked &&
       a.unlockPrevQty.equals(b.unlockPrevQty) &&
@@ -198,11 +202,13 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
   );
   const effectiveCost = getEffectiveGeneratorCost(
     def.cost,
-    upgradeGeneratorCostHalfRank
+    upgradeGeneratorCostHalfRank,
+    upgradeLineCostHalfRank
   );
   const effectiveCostPrev = getEffectiveGeneratorCost(
     def.costPreviousGenerator,
-    upgradeGeneratorCostHalfRank
+    upgradeGeneratorCostHalfRank,
+    upgradeLineCostHalfRank
   );
   const producedPerCycle = productionPerCycle.mul(quantity);
   const producedPerSecond =

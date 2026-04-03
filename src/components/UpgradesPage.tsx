@@ -18,6 +18,7 @@ import {
   getUpgradeCostMilestoneDoubler,
   getUpgradeCostGlobalProductionDoubler,
   getUpgradeCostLineProductionDoubler,
+  getUpgradeCostLineCostHalf,
   getMilestoneRewardMultiplier,
   getCritChance,
   getCritMultiplier,
@@ -161,6 +162,7 @@ export function UpgradesPage() {
     upgradeMilestoneDoublerRank,
     upgradeGlobalProductionDoublerRank,
     upgradeLineProductionDoublerRanks,
+    upgradeLineCostHalfRanks,
     generatorsData,
     unlockedLines,
   } = useGameSelector((state) => {
@@ -185,6 +187,7 @@ export function UpgradesPage() {
       upgradeMilestoneDoublerRank: state.upgradeMilestoneDoublerRank,
       upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank,
       upgradeLineProductionDoublerRanks: state.upgradeLineProductionDoublerRanks,
+      upgradeLineCostHalfRanks: state.upgradeLineCostHalfRanks,
       generatorsData,
       unlockedLines: Array.from({ length: LINE_COUNT }, (_, i) => isLineUnlocked(state, i + 1)),
     };
@@ -197,6 +200,7 @@ export function UpgradesPage() {
     a.upgradeMilestoneDoublerRank === b.upgradeMilestoneDoublerRank &&
     a.upgradeGlobalProductionDoublerRank === b.upgradeGlobalProductionDoublerRank &&
     a.upgradeLineProductionDoublerRanks === b.upgradeLineProductionDoublerRanks &&
+    a.upgradeLineCostHalfRanks === b.upgradeLineCostHalfRanks &&
     a.everOwnedSet.size === b.everOwnedSet.size &&
     [...a.everOwnedSet].every(id => b.everOwnedSet.has(id)) &&
     a.generatorsData.length === b.generatorsData.length &&
@@ -441,8 +445,8 @@ export function UpgradesPage() {
               const nextLineMult = 2 ** (lineRank + 1);
               return (
                 <li className="flex items-center gap-2">
-                  <div className={`btn-3d ${lineClasses.btn3d} flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${lineClasses.bg} text-sm font-bold text-white`} aria-hidden>
-                    {upgradeLine}
+                  <div className={`btn-3d ${lineClasses.btn3d} flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${lineClasses.bg} text-[10px] font-bold text-white`} aria-hidden>
+                    L{upgradeLine}
                   </div>
                   <UpgradeRow
                     flexible
@@ -462,6 +466,33 @@ export function UpgradesPage() {
                     onBuy={() => dispatch({ type: "BUY_LINE_PRODUCTION_DOUBLER_UPGRADE", line: upgradeLine })}
                     buttonLabel={`◆ ${formatNumber(lineCost)}`}
                   />
+                  {(() => {
+                    const costHalfRank = upgradeLineCostHalfRanks[upgradeLine] ?? 0;
+                    const costHalf = getUpgradeCostLineCostHalf(costHalfRank);
+                    const canBuyCostHalf = milestoneCurrency.gte(costHalf);
+                    const currentDiv = 2 ** costHalfRank;
+                    const nextDiv = 2 ** (costHalfRank + 1);
+                    return (
+                      <UpgradeRow
+                        flexible
+                        label={
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.halfCostLine}</span>
+                            <div className="flex items-center gap-1.5 text-sm font-medium">
+                              <span className="text-zinc-400">÷{formatNumber(Decimal.fromNumber(currentDiv))}</span>
+                              <span className="text-violet-400/80">→</span>
+                              <span className="text-white">÷{formatNumber(Decimal.fromNumber(nextDiv))}</span>
+                            </div>
+                          </div>
+                        }
+                        sublabel={`${costHalfRank}`}
+                        cost={`◆ ${formatNumber(costHalf)}`}
+                        canBuy={canBuyCostHalf}
+                        onBuy={() => dispatch({ type: "BUY_LINE_COST_HALF_UPGRADE", line: upgradeLine })}
+                        buttonLabel={`◆ ${formatNumber(costHalf)}`}
+                      />
+                    );
+                  })()}
                 </li>
               );
             })()}

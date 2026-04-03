@@ -23,6 +23,7 @@ import {
   getUpgradeCostMilestoneDoubler,
   getUpgradeCostGlobalProductionDoubler,
   getUpgradeCostLineProductionDoubler,
+  getUpgradeCostLineCostHalf,
   getMilestoneRewardMultiplier,
   getCritChance,
   getCritMultiplier,
@@ -46,6 +47,7 @@ export type GameAction =
   | { type: "BUY_MILESTONE_DOUBLER_UPGRADE" }
   | { type: "BUY_GLOBAL_PRODUCTION_DOUBLER_UPGRADE" }
   | { type: "BUY_LINE_PRODUCTION_DOUBLER_UPGRADE"; line: number }
+  | { type: "BUY_LINE_COST_HALF_UPGRADE"; line: number }
   | { type: "TOGGLE_FPS" }
   | { type: "TOGGLE_SFX" }
   | { type: "SET_SFX_VOLUME"; volume: number }
@@ -222,15 +224,18 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           if (prevQty.lt(unlockReq.required)) return state;
         }
       }
+      const { line: buyLine } = parseGeneratorId(action.id);
+      const lineCostHalfRank = state.upgradeLineCostHalfRanks[buyLine] ?? 0;
       const effectiveCost = getEffectiveGeneratorCost(
         def.cost,
-        state.upgradeGeneratorCostHalfRank
+        state.upgradeGeneratorCostHalfRank,
+        lineCostHalfRank
       );
       const effectiveCostPrev = getEffectiveGeneratorCost(
         def.costPreviousGenerator,
-        state.upgradeGeneratorCostHalfRank
+        state.upgradeGeneratorCostHalfRank,
+        lineCostHalfRank
       );
-      const { line: buyLine } = parseGeneratorId(action.id);
       const ticketCostPerUnit = buyLine;
       const lineRes = state.lineResources[buyLine] ?? Decimal.dZero;
       const maxByBase = lineRes.div(effectiveCost).floor();
@@ -418,6 +423,20 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         milestoneCurrency: state.milestoneCurrency.sub(cost),
         upgradeLineProductionDoublerRanks: {
           ...state.upgradeLineProductionDoublerRanks,
+          [action.line]: currentRank + 1,
+        },
+      };
+    }
+
+    case "BUY_LINE_COST_HALF_UPGRADE": {
+      const currentRank = state.upgradeLineCostHalfRanks[action.line] ?? 0;
+      const cost = getUpgradeCostLineCostHalf(currentRank);
+      if (state.milestoneCurrency.lt(cost)) return state;
+      return {
+        ...state,
+        milestoneCurrency: state.milestoneCurrency.sub(cost),
+        upgradeLineCostHalfRanks: {
+          ...state.upgradeLineCostHalfRanks,
           [action.line]: currentRank + 1,
         },
       };

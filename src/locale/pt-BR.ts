@@ -91,6 +91,7 @@ export const ptBR = {
     perTrade: "por troca",
     doubleProductionGlobal: "Dobrar produção (todos os geradores)",
     doubleProductionLine: "Dobrar produção (linha)",
+    halfCostLine: "Custo ÷2 (linha)",
     doubleMilestoneReward: "Dobrar ◆ por marco",
     perGenerator: "Por gerador",
     cycleTime: "Tempo de ciclo",

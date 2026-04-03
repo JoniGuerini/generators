@@ -98,14 +98,21 @@ export function getUpgradeCostTicketMultiplier(currentRank: number): Decimal {
   return Decimal.pow(Decimal.fromNumber(4), Math.max(0, currentRank));
 }
 
-/** Custo efetivo para comprar gerador (cada ranque global reduz pela metade, mínimo 1). */
+/** Custo efetivo para comprar gerador (global + linha reduzem pela metade, mínimo 1). */
 export function getEffectiveGeneratorCost(
   baseCost: Decimal,
-  upgradeGeneratorCostHalfRank: number
+  upgradeGeneratorCostHalfRank: number,
+  lineCostHalfRank: number = 0
 ): Decimal {
-  if (upgradeGeneratorCostHalfRank <= 0) return baseCost;
-  const reduced = baseCost.div(Decimal.pow(Decimal.fromNumber(2), upgradeGeneratorCostHalfRank));
+  const totalRank = upgradeGeneratorCostHalfRank + lineCostHalfRank;
+  if (totalRank <= 0) return baseCost;
+  const reduced = baseCost.div(Decimal.pow(Decimal.fromNumber(2), totalRank));
   return Decimal.max(Decimal.dOne, reduced.floor());
+}
+
+/** Custo em ◆ para "custo ÷2 (linha)": 50, 100, 200, 400… (dobra por ranque). */
+export function getUpgradeCostLineCostHalf(currentRank: number): Decimal {
+  return Decimal.fromNumber(50 * 2 ** currentRank);
 }
 
 /** Custo em ◆ para o próximo ranque da melhoria global "custo de compra ÷2": 1, 2, 4, 8… (dobra por ranque). */

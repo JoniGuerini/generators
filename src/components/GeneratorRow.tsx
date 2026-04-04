@@ -19,7 +19,12 @@ import {
   getNextMilestoneFromQuantity,
   getCoinsFromClaiming,
 } from "@/utils/milestones";
-import { getBuyAmount, getNextGeneratorUnlockTarget, isLastGeneratorInLine } from "@/utils/computeGeneratorPurchase";
+import {
+  getBuyAmount,
+  getMaxAffordableForGenerator,
+  getNextGeneratorUnlockTarget,
+  isLastGeneratorInLine,
+} from "@/utils/computeGeneratorPurchase";
 import { useHoldToBuyGenerator } from "@/hooks/useHoldToBuyGenerator";
 import { useT } from "@/locale";
 
@@ -81,18 +86,8 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     const effectiveCost = getEffectiveGeneratorCost(def.cost, upgradeGeneratorCostHalfRank, lineCostHalfRank);
     const effectiveCostPrev = getEffectiveGeneratorCost(def.costPreviousGenerator, upgradeGeneratorCostHalfRank, lineCostHalfRank);
 
-    // Calc max affordable
+    const maxAffordable = getMaxAffordableForGenerator(state, id);
     const ticketCostPerUnit = parseGeneratorId(id).line;
-    const maxByBase = lineResource.div(effectiveCost).floor();
-    const maxByTickets = ticketCurrency.div(ticketCostPerUnit).floor();
-    let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
-    if (effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base" && prevGenQuantity) {
-      maxByPrev = prevGenQuantity.div(effectiveCostPrev).floor();
-    }
-    
-    let maxAffordable = maxByBase;
-    if (maxByTickets.lt(maxAffordable)) maxAffordable = maxByTickets;
-    if (maxByPrev.lt(maxAffordable)) maxAffordable = maxByPrev;
 
     const hasEnoughPrev = effectiveCostPrev.lte(Decimal.dZero) || def.produces === "base" || (prevGenQuantity ? Decimal.gte(prevGenQuantity, effectiveCostPrev) : false);
 
@@ -234,40 +229,48 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
     amountNeededForProximo == null || alreadyHasEnoughForNext || maxAffordable.gte(amountNeededForProximo);
   const showAsUnaffordable = !canBuy || (buyMode === "marco" && !canReachMarco) || (buyMode === "proximo" && !canReachProximo && !alreadyHasEnoughForNext);
   showAsUnaffordableRef.current = showAsUnaffordable;
-  const canClickBuy = canBuy && buyAmount >= 1 && (buyMode !== "marco" || canReachMarco) && (buyMode !== "proximo" || canReachProximo);
+  const canClickBuy =
+    canBuy &&
+    buyAmount.gte(Decimal.dOne) &&
+    (buyMode !== "marco" || canReachMarco) &&
+    (buyMode !== "proximo" || canReachProximo);
 
-  const amountForDisplay =
-    buyMode === "marco" && amountNeededForMarco != null
-      ? Math.min(amountNeededForMarco.toNumber(), Number.MAX_SAFE_INTEGER)
-      : buyMode === "proximo" && amountNeededForProximo != null && amountNeededForProximo.gt(Decimal.dZero)
-        ? Math.min(amountNeededForProximo.toNumber(), Number.MAX_SAFE_INTEGER)
-        : buyAmount;
-
-  const totalCost = buyAmount >= 1 ? effectiveCost.mul(buyAmount) : Decimal.dZero;
-  const amountForCostCalc =
-    buyMode === "marco" && amountNeededForMarco != null && amountNeededForMarco.gte(Decimal.dOne)
+  /**
+   * Com clique habilitado = exatamente o que será comprado.
+   * Marco/próximo desabilitados: mostra o salto até o alvo (contexto), não um valor que não será aplicado.
+   */
+  const amountForDisplay: Decimal = canClickBuy
+    ? buyAmount
+    : buyMode === "marco" && amountNeededForMarco != null
       ? amountNeededForMarco
       : buyMode === "proximo" && amountNeededForProximo != null && amountNeededForProximo.gt(Decimal.dZero)
         ? amountNeededForProximo
-        : null;
-  const costForDisplay =
-    amountForCostCalc != null
-      ? effectiveCost.mul(amountForCostCalc)
-      : buyAmount >= 1 ? totalCost : effectiveCost;
+        : buyAmount;
+
+  const qtyForCostTooltip: Decimal = canClickBuy
+    ? buyAmount
+    : buyMode === "marco" && amountNeededForMarco != null
+      ? amountNeededForMarco
+      : buyMode === "proximo" && amountNeededForProximo != null && amountNeededForProximo.gt(Decimal.dZero)
+        ? amountNeededForProximo
+        : buyAmount;
+
+  const costForDisplay = qtyForCostTooltip.gte(Decimal.dOne)
+    ? effectiveCost.mul(qtyForCostTooltip)
+    : effectiveCost;
   const prevCostForDisplay =
-    amountForCostCalc != null && effectiveCostPrev.gt(Decimal.dZero)
-      ? effectiveCostPrev.mul(amountForCostCalc)
-      : buyAmount >= 1 && effectiveCostPrev.gt(Decimal.dZero)
-        ? effectiveCostPrev.mul(buyAmount)
-        : effectiveCostPrev;
+    qtyForCostTooltip.gte(Decimal.dOne) && effectiveCostPrev.gt(Decimal.dZero)
+      ? effectiveCostPrev.mul(qtyForCostTooltip)
+      : effectiveCostPrev;
   /* Quando % resulta em 0 (não pode comprar nenhum), mostramos valor padrão: custo de 1 unidade, sem número na quantidade */
-  const displayCost = amountForDisplay >= 1 ? costForDisplay : effectiveCost;
+  const displayCost = qtyForCostTooltip.gte(Decimal.dOne) ? costForDisplay : effectiveCost;
   const displayPrevCost = prevCostForDisplay;
   const hasPrevCost = effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base";
   const ticketCostPerUnit = parseGeneratorId(id).line;
-  const ticketsRequired = (amountForDisplay >= 1 ? amountForDisplay : 1) * ticketCostPerUnit;
+  const ticketsForDisplayQty = qtyForCostTooltip.gte(Decimal.dOne) ? qtyForCostTooltip : Decimal.dOne;
+  const ticketsRequired = ticketsForDisplayQty.mul(ticketCostPerUnit);
   const lacksBase = lineResource.lt(displayCost);
-  const lacksTickets = ticketCurrency.lt(Decimal.fromNumber(ticketsRequired));
+  const lacksTickets = ticketCurrency.lt(ticketsRequired);
   const lacksPrev = hasPrevCost && (
     prevGenQuantity
       ? prevGenQuantity.lt(displayPrevCost)
@@ -362,7 +365,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                       <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.tickets}</span>
                     </div>
                     <span className={`truncate text-sm font-bold tabular-nums ${lacksTickets ? "text-red-400" : "text-amber-200"}`}>
-                      {formatNumber(Decimal.fromNumber(ticketsRequired))}
+                      {formatNumber(ticketsRequired)}
                     </span>
                   </div>
                 </div>
@@ -383,7 +386,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
             </div>
           )}
           <span className="pointer-events-none shrink-0">
-            {t.generator.buy}{amountForDisplay > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(amountForDisplay))}</span></> : null}
+            {t.generator.buy}{amountForDisplay.gt(Decimal.dOne) ? <> <span className="tabular-nums">{formatNumber(amountForDisplay)}</span></> : null}
           </span>
           <button
             type="button"
@@ -396,7 +399,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
             title={
               !showAsUnaffordable
                 ? t.generator.holdToBuy
-                : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`
+                : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(ticketsRequired)}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`
             }
             className="absolute inset-0 touch-manipulation rounded-md outline-none select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-0"
             aria-label={t.generator.buyUnlockAria}
@@ -591,7 +594,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
                     <span className="text-xs font-bold uppercase tracking-wider text-white">{t.generator.tickets}</span>
                   </div>
                   <span className={`truncate text-sm font-bold tabular-nums ${lacksTickets ? "text-red-400" : "text-amber-200"}`}>
-                    {formatNumber(Decimal.fromNumber(ticketsRequired))}
+                    {formatNumber(ticketsRequired)}
                   </span>
                 </div>
               </div>
@@ -616,7 +619,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
             ? t.generator.buy
             : buyMode === "proximo" && alreadyHasEnoughForNext
               ? t.generator.ready
-              : <>{t.generator.buy}{amountForDisplay > 1 ? <> <span className="tabular-nums">{formatNumber(Decimal.fromNumber(amountForDisplay))}</span></> : null}</>}
+              : <>{t.generator.buy}{amountForDisplay.gt(Decimal.dOne) ? <> <span className="tabular-nums">{formatNumber(amountForDisplay)}</span></> : null}</>}
         </span>
         <button
           type="button"
@@ -629,7 +632,7 @@ export const GeneratorRow = memo(function GeneratorRow({ id }: GeneratorRowProps
           title={
             !showAsUnaffordable
               ? t.generator.holdToBuy
-              : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(Decimal.fromNumber(ticketsRequired))}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`
+              : `Custo: ● ${formatNumber(displayCost)} · ▲ ${formatNumber(ticketsRequired)}${hasPrevCost && def.produces !== "base" ? ` · ${formatNumber(displayPrevCost)} ${GENERATOR_DEFS[def.produces].name}` : ""}`
           }
           className="absolute inset-0 touch-manipulation rounded-md outline-none select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
           aria-label={t.generator.buyGeneratorAria}

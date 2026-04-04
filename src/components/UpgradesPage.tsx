@@ -1,6 +1,31 @@
-import { useState } from "react";
+import { useState, useContext, useCallback } from "react";
 import Decimal from "break_eternity.js";
-import { useGameSelector, useGameDispatch } from "@/store/useGameStore";
+import { StoreContext, useGameSelector } from "@/store/useGameStore";
+import type { GameState } from "@/store/gameState";
+import type { GameAction } from "@/store/reducer";
+import { useBuyMode } from "@/contexts/BuyModeContext";
+import {
+  ABSOLUTE_CAP,
+  dispatchUpgradeBulk,
+  dispatchUpgradeFixedBatch,
+} from "@/utils/upgradeBulkPurchase";
+import * as purchaseTry from "@/utils/upgradePurchaseTry";
+import {
+  type UpgradeBulkCostInput,
+  type BulkSpendPreview,
+  computeTicketMultiplierBulkSpend,
+  computeTicketTradeDoublerBulkSpend,
+  computeGeneratorCostHalfBulkSpend,
+  computeMilestoneDoublerBulkSpend,
+  computeGlobalProductionDoublerBulkSpend,
+  computeLineProductionDoublerBulkSpend,
+  computeLineCostHalfBulkSpend,
+  computeCycleSpeedBulkSpend,
+  computeProductionBulkSpend,
+  computeCritChanceBulkSpend,
+  computeCritMultiplierBulkSpend,
+  upgradePreviewCanBuy,
+} from "@/utils/computeUpgradeBulkSpend";
 import { getTotalTicketTrades, isLineUnlocked, getLineUnlockRequirement } from "@/store/gameState";
 import { GENERATOR_DEFS, parseGeneratorId, getLineColor, LINE_COLOR_CLASSES, LINE_COUNT, GENERATORS_PER_LINE, makeGeneratorId } from "@/engine/constants";
 import { useT } from "@/locale";
@@ -10,15 +35,8 @@ import {
   getMaxCycleSpeedRank,
   getUpgradeCostCycleSpeed,
   getUpgradeCostProduction,
-  getUpgradeCostGeneratorCostHalf,
   getTicketsPerSecond,
-  getUpgradeCostTicketMultiplier,
-  getUpgradeCostTicketTradeDoubler,
   getTicketTradeValue,
-  getUpgradeCostMilestoneDoubler,
-  getUpgradeCostGlobalProductionDoubler,
-  getUpgradeCostLineProductionDoubler,
-  getUpgradeCostLineCostHalf,
   getMilestoneRewardMultiplier,
   getCritChance,
   getCritMultiplier,
@@ -146,11 +164,48 @@ function UpgradeRow({
   );
 }
 
+function upgradeBuyButtonLabel(p: BulkSpendPreview): string {
+  if (p.count > 0) return `◆ ${formatNumber(p.total)}`;
+  if (p.firstCost != null) return `◆ ${formatNumber(p.firstCost)}`;
+  return "—";
+}
+
+function upgradeBuyCostTitle(p: BulkSpendPreview): string {
+  if (p.count > 0) return `◆ ${formatNumber(p.total)}`;
+  if (p.firstCost != null) return `◆ ${formatNumber(p.firstCost)}`;
+  return "";
+}
+
 export function UpgradesPage() {
-  const dispatch = useGameDispatch();
+  const store = useContext(StoreContext);
+  const { upgradeBuyMode } = useBuyMode();
   const t = useT();
   const [tab, setTab] = useState<UpgradesTab>("geral");
   const [upgradeLine, setUpgradeLine] = useState(1);
+
+  const bulk = useCallback(
+    (tryGet: (s: GameState) => GameAction | null, preview: BulkSpendPreview) => {
+      if (!store) return;
+      if (preview.isFlexibleBatch) {
+        dispatchUpgradeBulk(
+          (a) => store.dispatch(a),
+          () => store.getState(),
+          ABSOLUTE_CAP,
+          tryGet,
+        );
+      } else {
+        const cur = store.getState().milestoneCurrency;
+        if (!upgradePreviewCanBuy(preview, cur)) return;
+        dispatchUpgradeFixedBatch(
+          (a) => store.dispatch(a),
+          () => store.getState(),
+          preview.count,
+          tryGet,
+        );
+      }
+    },
+    [store],
+  );
 
   const {
     everOwnedSet,
@@ -213,6 +268,26 @@ export function UpgradesPage() {
     a.unlockedLines.every((v, i) => v === b.unlockedLines[i])
   );
 
+  const bulkInput: UpgradeBulkCostInput = {
+    milestoneCurrency,
+    upgradeTicketMultiplierRank,
+    upgradeTicketTradeDoublerRank,
+    upgradeGeneratorCostHalfRank,
+    upgradeMilestoneDoublerRank,
+    upgradeGlobalProductionDoublerRank,
+    upgradeLineProductionDoublerRanks,
+    upgradeLineCostHalfRanks,
+    generators: generatorsData,
+  };
+
+  const pGenHalf = computeGeneratorCostHalfBulkSpend(bulkInput, upgradeBuyMode);
+  const pMileD = computeMilestoneDoublerBulkSpend(bulkInput, upgradeBuyMode);
+  const pGlobP = computeGlobalProductionDoublerBulkSpend(bulkInput, upgradeBuyMode);
+  const pTicketM = computeTicketMultiplierBulkSpend(bulkInput, upgradeBuyMode);
+  const pTicketT = computeTicketTradeDoublerBulkSpend(bulkInput, upgradeBuyMode);
+  const pLineProd = computeLineProductionDoublerBulkSpend(bulkInput, upgradeLine, upgradeBuyMode);
+  const pLineHalf = computeLineCostHalfBulkSpend(bulkInput, upgradeLine, upgradeBuyMode);
+
   const allLineGeneratorIds = Array.from(
     { length: GENERATORS_PER_LINE },
     (_, i) => makeGeneratorId(upgradeLine, i + 1)
@@ -221,11 +296,6 @@ export function UpgradesPage() {
   const ticketsPerSec = getTicketsPerSecond(totalTicketTrades, upgradeTicketMultiplierRank, upgradeTicketTradeDoublerRank);
   const nextTicketsMultiplier = getTicketsPerSecond(totalTicketTrades, upgradeTicketMultiplierRank + 1, upgradeTicketTradeDoublerRank);
 
-  const costTicketMultiplier = getUpgradeCostTicketMultiplier(upgradeTicketMultiplierRank);
-  const canBuyTicketMultiplier = milestoneCurrency.gte(costTicketMultiplier);
-
-  const costTicketTradeDoubler = getUpgradeCostTicketTradeDoubler(upgradeTicketTradeDoublerRank);
-  const canBuyTicketTradeDoubler = milestoneCurrency.gte(costTicketTradeDoubler);
   const currentTradeValue = getTicketTradeValue(upgradeTicketTradeDoublerRank);
   const nextTradeValue = getTicketTradeValue(upgradeTicketTradeDoublerRank + 1);
 
@@ -299,8 +369,6 @@ export function UpgradesPage() {
           <div className="flex flex-wrap gap-2">
             {(() => {
               const rank = upgradeGeneratorCostHalfRank;
-              const costHalf = getUpgradeCostGeneratorCostHalf(rank);
-              const canBuyHalf = milestoneCurrency.gte(costHalf);
               return (
                 <UpgradeRow
                   flexible
@@ -308,17 +376,15 @@ export function UpgradesPage() {
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{t.upgradesPage.halfCostAll}</span>
                   }
                   sublabel={`${rank}`}
-                  cost={`◆ ${formatNumber(costHalf)}`}
-                  canBuy={canBuyHalf}
-                  onBuy={() => dispatch({ type: "BUY_GENERATOR_COST_HALF_UPGRADE" })}
-                  buttonLabel={`◆ ${formatNumber(costHalf)}`}
+                  cost={upgradeBuyCostTitle(pGenHalf)}
+                  canBuy={upgradePreviewCanBuy(pGenHalf, milestoneCurrency)}
+                  onBuy={() => bulk(purchaseTry.tryBuyGeneratorCostHalf, pGenHalf)}
+                  buttonLabel={upgradeBuyButtonLabel(pGenHalf)}
                 />
               );
             })()}
             {(() => {
               const rank = upgradeMilestoneDoublerRank;
-              const costDoubler = getUpgradeCostMilestoneDoubler(rank);
-              const canBuyDoubler = milestoneCurrency.gte(costDoubler);
               const currentMult = getMilestoneRewardMultiplier(rank);
               const nextMult = getMilestoneRewardMultiplier(rank + 1);
               return (
@@ -335,17 +401,15 @@ export function UpgradesPage() {
                     </div>
                   }
                   sublabel={`${rank}`}
-                  cost={`◆ ${formatNumber(costDoubler)}`}
-                  canBuy={canBuyDoubler}
-                  onBuy={() => dispatch({ type: "BUY_MILESTONE_DOUBLER_UPGRADE" })}
-                  buttonLabel={`◆ ${formatNumber(costDoubler)}`}
+                  cost={upgradeBuyCostTitle(pMileD)}
+                  canBuy={upgradePreviewCanBuy(pMileD, milestoneCurrency)}
+                  onBuy={() => bulk(purchaseTry.tryBuyMilestoneDoubler, pMileD)}
+                  buttonLabel={upgradeBuyButtonLabel(pMileD)}
                 />
               );
             })()}
             {(() => {
               const rank = upgradeGlobalProductionDoublerRank;
-              const cost = getUpgradeCostGlobalProductionDoubler(rank);
-              const canBuy = milestoneCurrency.gte(cost);
               const currentMult = 2 ** rank;
               const nextMult = 2 ** (rank + 1);
               return (
@@ -362,10 +426,10 @@ export function UpgradesPage() {
                     </div>
                   }
                   sublabel={`${rank}`}
-                  cost={`◆ ${formatNumber(cost)}`}
-                  canBuy={canBuy}
-                  onBuy={() => dispatch({ type: "BUY_GLOBAL_PRODUCTION_DOUBLER_UPGRADE" })}
-                  buttonLabel={`◆ ${formatNumber(cost)}`}
+                  cost={upgradeBuyCostTitle(pGlobP)}
+                  canBuy={upgradePreviewCanBuy(pGlobP, milestoneCurrency)}
+                  onBuy={() => bulk(purchaseTry.tryBuyGlobalProductionDoubler, pGlobP)}
+                  buttonLabel={upgradeBuyButtonLabel(pGlobP)}
                 />
               );
             })()}
@@ -390,10 +454,10 @@ export function UpgradesPage() {
                   </div>
                 }
                 sublabel={`×2: ${upgradeTicketMultiplierRank}`}
-                cost={`◆ ${formatNumber(costTicketMultiplier)}`}
-                canBuy={canBuyTicketMultiplier}
-                onBuy={() => dispatch({ type: "BUY_TICKET_MULTIPLIER_UPGRADE" })}
-                buttonLabel={`◆ ${formatNumber(costTicketMultiplier)}`}
+                cost={upgradeBuyCostTitle(pTicketM)}
+                canBuy={upgradePreviewCanBuy(pTicketM, milestoneCurrency)}
+                onBuy={() => bulk(purchaseTry.tryBuyTicketMultiplier, pTicketM)}
+                buttonLabel={upgradeBuyButtonLabel(pTicketM)}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -412,10 +476,10 @@ export function UpgradesPage() {
                   </div>
                 }
                 sublabel={`×2: ${upgradeTicketTradeDoublerRank}`}
-                cost={`◆ ${formatNumber(costTicketTradeDoubler)}`}
-                canBuy={canBuyTicketTradeDoubler}
-                onBuy={() => dispatch({ type: "BUY_TICKET_TRADE_DOUBLER_UPGRADE" })}
-                buttonLabel={`◆ ${formatNumber(costTicketTradeDoubler)}`}
+                cost={upgradeBuyCostTitle(pTicketT)}
+                canBuy={upgradePreviewCanBuy(pTicketT, milestoneCurrency)}
+                onBuy={() => bulk(purchaseTry.tryBuyTicketTradeDoubler, pTicketT)}
+                buttonLabel={upgradeBuyButtonLabel(pTicketT)}
               />
             </div>
           </div>
@@ -439,8 +503,6 @@ export function UpgradesPage() {
               const lineColor = getLineColor(upgradeLine);
               const lineClasses = LINE_COLOR_CLASSES[lineColor];
               const lineRank = upgradeLineProductionDoublerRanks[upgradeLine] ?? 0;
-              const lineCost = getUpgradeCostLineProductionDoubler(lineRank);
-              const canBuyLine = milestoneCurrency.gte(lineCost);
               const currentLineMult = 2 ** lineRank;
               const nextLineMult = 2 ** (lineRank + 1);
               return (
@@ -461,15 +523,13 @@ export function UpgradesPage() {
                       </div>
                     }
                     sublabel={`${lineRank}`}
-                    cost={`◆ ${formatNumber(lineCost)}`}
-                    canBuy={canBuyLine}
-                    onBuy={() => dispatch({ type: "BUY_LINE_PRODUCTION_DOUBLER_UPGRADE", line: upgradeLine })}
-                    buttonLabel={`◆ ${formatNumber(lineCost)}`}
+                    cost={upgradeBuyCostTitle(pLineProd)}
+                    canBuy={upgradePreviewCanBuy(pLineProd, milestoneCurrency)}
+                    onBuy={() => bulk((s) => purchaseTry.tryBuyLineProductionDoubler(s, upgradeLine), pLineProd)}
+                    buttonLabel={upgradeBuyButtonLabel(pLineProd)}
                   />
                   {(() => {
                     const costHalfRank = upgradeLineCostHalfRanks[upgradeLine] ?? 0;
-                    const costHalf = getUpgradeCostLineCostHalf(costHalfRank);
-                    const canBuyCostHalf = milestoneCurrency.gte(costHalf);
                     const currentDiv = 2 ** costHalfRank;
                     const nextDiv = 2 ** (costHalfRank + 1);
                     return (
@@ -486,10 +546,10 @@ export function UpgradesPage() {
                           </div>
                         }
                         sublabel={`${costHalfRank}`}
-                        cost={`◆ ${formatNumber(costHalf)}`}
-                        canBuy={canBuyCostHalf}
-                        onBuy={() => dispatch({ type: "BUY_LINE_COST_HALF_UPGRADE", line: upgradeLine })}
-                        buttonLabel={`◆ ${formatNumber(costHalf)}`}
+                        cost={upgradeBuyCostTitle(pLineHalf)}
+                        canBuy={upgradePreviewCanBuy(pLineHalf, milestoneCurrency)}
+                        onBuy={() => bulk((s) => purchaseTry.tryBuyLineCostHalf(s, upgradeLine), pLineHalf)}
+                        buttonLabel={upgradeBuyButtonLabel(pLineHalf)}
                       />
                     );
                   })()}
@@ -526,8 +586,12 @@ export function UpgradesPage() {
                   ? getUpgradeCostCycleSpeed(generatorNumber, cycleRank)
                   : null;
               const costProd = getUpgradeCostProduction(generatorNumber, prodRank);
-              const canBuyCycle = costCycle != null && milestoneCurrency.gte(costCycle);
-              const canBuyProd = milestoneCurrency.gte(costProd);
+              const pCycle = computeCycleSpeedBulkSpend(bulkInput, id, upgradeBuyMode);
+              const pProd = computeProductionBulkSpend(bulkInput, id, upgradeBuyMode);
+              const pCritC = computeCritChanceBulkSpend(bulkInput, id, upgradeBuyMode);
+              const pCritM = computeCritMultiplierBulkSpend(bulkInput, id, upgradeBuyMode);
+              const canBuyCycle = upgradePreviewCanBuy(pCycle, milestoneCurrency);
+              const canBuyProd = upgradePreviewCanBuy(pProd, milestoneCurrency);
               const currentCycle = getEffectiveCycleTimeSeconds(def.cycleTimeSeconds, cycleRank);
               const nextCycle = cycleRank < maxCycleRank
                 ? getEffectiveCycleTimeSeconds(def.cycleTimeSeconds, cycleRank + 1)
@@ -559,10 +623,10 @@ export function UpgradesPage() {
                         </div>
                       }
                       sublabel={maxCycleRank > 0 ? `${cycleRank}/${maxCycleRank}` : `${cycleRank}`}
-                      cost={costCycle ? `◆ ${formatNumber(costCycle)}` : ""}
-                      canBuy={canBuyCycle ?? false}
-                      onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "cycleSpeed" })}
-                      buttonLabel={costCycle ? `◆ ${formatNumber(costCycle)}` : "—"}
+                      cost={upgradeBuyCostTitle(pCycle) || (costCycle ? `◆ ${formatNumber(costCycle)}` : "")}
+                      canBuy={canBuyCycle}
+                      onBuy={() => bulk((s) => purchaseTry.tryBuyCycleSpeed(s, id), pCycle)}
+                      buttonLabel={upgradeBuyButtonLabel(pCycle)}
                       maxed={cycleRank >= maxCycleRank}
                       maxedLabel={t.upgradesPage.maxed}
                     />
@@ -579,10 +643,10 @@ export function UpgradesPage() {
                         </div>
                       }
                       sublabel={`${prodRank}`}
-                      cost={`◆ ${formatNumber(costProd)}`}
+                      cost={upgradeBuyCostTitle(pProd) || `◆ ${formatNumber(costProd)}`}
                       canBuy={canBuyProd}
-                      onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "production" })}
-                      buttonLabel={`◆ ${formatNumber(costProd)}`}
+                      onBuy={() => bulk((s) => purchaseTry.tryBuyProduction(s, id), pProd)}
+                      buttonLabel={upgradeBuyButtonLabel(pProd)}
                     />
                     {(() => {
                       const critRank = gen.upgradeCritChanceRank;
@@ -591,8 +655,8 @@ export function UpgradesPage() {
                         ? getUpgradeCostCritChance(generatorNumber, critRank)
                         : null;
                       const costCritMult = getUpgradeCostCritMultiplier(generatorNumber, critMultRank);
-                      const canBuyCrit = costCrit != null && milestoneCurrency.gte(costCrit);
-                      const canBuyCritMult = milestoneCurrency.gte(costCritMult);
+                      const canBuyCrit = upgradePreviewCanBuy(pCritC, milestoneCurrency);
+                      const canBuyCritMult = upgradePreviewCanBuy(pCritM, milestoneCurrency);
                       const currentChance = getCritChance(critRank);
                       const nextChance = getCritChance(critRank + 1);
                       const currentCritMult = getCritMultiplier(critMultRank);
@@ -616,10 +680,10 @@ export function UpgradesPage() {
                               </div>
                             }
                             sublabel={MAX_CRIT_CHANCE_RANK > 0 ? `${critRank}/${MAX_CRIT_CHANCE_RANK}` : `${critRank}`}
-                            cost={costCrit ? `◆ ${formatNumber(costCrit)}` : ""}
-                            canBuy={canBuyCrit ?? false}
-                            onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "critChance" })}
-                            buttonLabel={costCrit ? `◆ ${formatNumber(costCrit)}` : "—"}
+                            cost={upgradeBuyCostTitle(pCritC) || (costCrit ? `◆ ${formatNumber(costCrit)}` : "")}
+                            canBuy={canBuyCrit}
+                            onBuy={() => bulk((s) => purchaseTry.tryBuyCritChance(s, id), pCritC)}
+                            buttonLabel={upgradeBuyButtonLabel(pCritC)}
                             maxed={critRank >= MAX_CRIT_CHANCE_RANK}
                             maxedLabel={t.upgradesPage.maxed}
                           />
@@ -636,10 +700,10 @@ export function UpgradesPage() {
                               </div>
                             }
                             sublabel={`${critMultRank}`}
-                            cost={`◆ ${formatNumber(costCritMult)}`}
+                            cost={upgradeBuyCostTitle(pCritM) || `◆ ${formatNumber(costCritMult)}`}
                             canBuy={canBuyCritMult}
-                            onBuy={() => dispatch({ type: "BUY_UPGRADE", id, upgradeType: "critMultiplier" })}
-                            buttonLabel={`◆ ${formatNumber(costCritMult)}`}
+                            onBuy={() => bulk((s) => purchaseTry.tryBuyCritMultiplier(s, id), pCritM)}
+                            buttonLabel={upgradeBuyButtonLabel(pCritM)}
                           />
                         </>
                       );

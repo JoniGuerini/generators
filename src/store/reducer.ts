@@ -8,6 +8,7 @@ import {
   getCoinsFromClaiming,
   advanceMilestoneTargetIndex,
 } from "@/utils/milestones";
+import { getMaxAffordableForGenerator } from "@/utils/computeGeneratorPurchase";
 import {
   getEffectiveCycleTimeSeconds,
   getEffectiveProductionPerCycle,
@@ -35,7 +36,7 @@ import {
 export type GameAction =
   | { type: "TICK"; deltaTimeMs: number; currentTimestamp: number }
   | { type: "MANUAL_CYCLE"; id: GeneratorId }
-  | { type: "BUY_GENERATOR"; id: GeneratorId; amount: number }
+  | { type: "BUY_GENERATOR"; id: GeneratorId; amount: Decimal }
   | { type: "CLAIM_MILESTONES"; id: GeneratorId }
   | { type: "CLAIM_ALL_MILESTONES" }
   | { type: "BUY_UPGRADE"; id: GeneratorId; upgradeType: "cycleSpeed" | "production" | "critChance" | "critMultiplier" }
@@ -215,7 +216,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "BUY_GENERATOR": {
       const def = GENERATOR_DEFS[action.id];
       const genIndex = state.generators.findIndex((g) => g.id === action.id);
-      if (genIndex < 0 || action.amount < 1) return state;
+      if (genIndex < 0 || action.amount.lt(Decimal.dOne)) return state;
       const gen = state.generators[genIndex];
       if (!gen.everOwned) {
         const unlockReq = getUnlockRequirement(action.id);
@@ -238,29 +239,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       );
       const ticketCostPerUnit = buyLine;
       const lineRes = state.lineResources[buyLine] ?? Decimal.dZero;
-      const maxByBase = lineRes.div(effectiveCost).floor();
-      const maxByTickets = state.ticketCurrency.div(ticketCostPerUnit).floor();
-      let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
-      if (effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base") {
-        const prevGen = state.generators.find((g) => g.id === def.produces);
-        if (prevGen) {
-          maxByPrev = prevGen.quantity.div(effectiveCostPrev).floor();
-        }
-      }
-      const maxByTicketsNum = Math.min(maxByTickets.toNumber(), Number.MAX_SAFE_INTEGER);
-      const maxByPrevNum = Math.min(maxByPrev.toNumber(), Number.MAX_SAFE_INTEGER);
-      const maxAffordable = Decimal.fromNumber(
-        Math.min(
-          maxByBase.toNumber(),
-          maxByTicketsNum,
-          maxByPrevNum,
-          action.amount
-        )
-      );
-      const amountDecimal = maxAffordable;
+      const maxAffordableCap = getMaxAffordableForGenerator(state, action.id);
+      const amountDecimal = Decimal.min(maxAffordableCap, action.amount);
       if (amountDecimal.lte(Decimal.dZero)) return state;
       const totalCost = effectiveCost.mul(amountDecimal);
-      const amountNum = amountDecimal.toNumber();
       const totalPrevCost =
         effectiveCostPrev.gt(Decimal.dZero) && def.produces !== "base"
           ? effectiveCostPrev.mul(amountDecimal)
@@ -273,7 +255,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           const cycleTimeSec = getEffectiveCycleTimeSeconds(def.cycleTimeSeconds, g.upgradeCycleSpeedRank);
           const next = {
             ...g,
-            quantity: g.quantity.add(Decimal.fromNumber(amountNum)),
+            quantity: g.quantity.add(amountDecimal),
             everOwned: true,
             cycleProgress: isFirstPurchase ? 0 : g.cycleProgress,
             cycleStartTime: isFirstPurchase
@@ -298,7 +280,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         lineResources: { ...state.lineResources, [buyLine]: lineRes.sub(totalCost) },
-        ticketCurrency: state.ticketCurrency.sub(Decimal.fromNumber(amountNum * ticketCostPerUnit)),
+        ticketCurrency: state.ticketCurrency.sub(amountDecimal.mul(ticketCostPerUnit)),
         generators: nextGenerators,
       };
     }

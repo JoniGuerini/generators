@@ -25,62 +25,23 @@ export function isLastGeneratorInLine(id: GeneratorId): boolean {
   return parseGeneratorId(id).gen >= GENERATORS_PER_LINE;
 }
 
-export function getBuyAmount(
-  mode: BuyMode,
-  maxAffordable: Decimal,
-  quantity?: Decimal,
-  nextGenCost?: Decimal | null,
-): number {
-  if (mode === "1x") return 1;
-  if (mode === "marco") {
-    if (quantity == null) return maxAffordable.gte(Decimal.dOne) ? 1 : 0;
-    const nextMarco = getNextMilestoneFromQuantity(quantity);
-    const toBuyDecimal = nextMarco.sub(quantity).floor();
-    if (toBuyDecimal.lt(Decimal.dZero)) return maxAffordable.gte(Decimal.dOne) ? 1 : 0;
-    const toBuy = Decimal.min(toBuyDecimal, maxAffordable);
-    const n = toBuy.toNumber();
-    if (!Number.isFinite(n) || n < 0) return 0;
-    const amount = Math.min(n, Number.MAX_SAFE_INTEGER);
-    if (amount === 0 && Decimal.gte(maxAffordable, Decimal.dOne)) return 1;
-    return amount;
-  }
-  if (mode === "proximo") {
-    if (quantity == null || nextGenCost == null) return maxAffordable.gte(Decimal.dOne) ? 1 : 0;
-    const needed = nextGenCost.sub(quantity).ceil();
-    if (needed.lte(Decimal.dZero)) return 0;
-    const toBuy = Decimal.min(needed, maxAffordable);
-    const n = toBuy.toNumber();
-    if (!Number.isFinite(n) || n < 0) return 0;
-    return Math.min(n, Number.MAX_SAFE_INTEGER);
-  }
-  const pct =
-    mode === "1%" ? 0.01 : mode === "10%" ? 0.1 : mode === "50%" ? 0.5 : 1;
-  const toBuyDecimal = maxAffordable.mul(pct).floor();
-  const n = toBuyDecimal.toNumber();
-  if (!Number.isFinite(n) || n < 0) return 0;
-  const amount = Math.min(n, Number.MAX_SAFE_INTEGER);
-  if (amount === 0 && Decimal.gte(maxAffordable, Decimal.dOne)) return 1;
-  return amount;
-}
-
-/** Estado atual: quantidade e se pode comprar (para clique seguro / hold). */
-export function computeGeneratorPurchase(
+/** Máximo de unidades compráveis de uma vez (◆, ▲ e gerador anterior). Usado na UI e no reducer. */
+export function getMaxAffordableForGenerator(
   state: GameState,
   id: GeneratorId,
-  buyMode: BuyMode
-): { amount: number; canPurchase: boolean } {
+): Decimal {
   const def = GENERATOR_DEFS[id];
-  const gen = state.generators.find((g) => g.id === id);
-  if (!gen) return { amount: 0, canPurchase: false };
-
-  const half = state.upgradeGeneratorCostHalfRank;
   const genLine = parseGeneratorId(id).line;
   const lineHalf = state.upgradeLineCostHalfRanks[genLine] ?? 0;
-  const effectiveCost = getEffectiveGeneratorCost(def.cost, half, lineHalf);
+  const effectiveCost = getEffectiveGeneratorCost(
+    def.cost,
+    state.upgradeGeneratorCostHalfRank,
+    lineHalf,
+  );
   const effectiveCostPrev = getEffectiveGeneratorCost(
     def.costPreviousGenerator,
-    half,
-    lineHalf
+    state.upgradeGeneratorCostHalfRank,
+    lineHalf,
   );
   const lineResource = state.lineResources[genLine] ?? Decimal.dZero;
   const ticketCurrency = state.ticketCurrency;
@@ -92,17 +53,80 @@ export function computeGeneratorPurchase(
   const ticketCostPerUnit = parseGeneratorId(id).line;
   const maxByBase = lineResource.div(effectiveCost).floor();
   const maxByTickets = ticketCurrency.div(ticketCostPerUnit).floor();
-  let maxByPrev = Decimal.fromNumber(Number.MAX_SAFE_INTEGER);
+  let maxAffordable = maxByBase;
+  if (maxByTickets.lt(maxAffordable)) maxAffordable = maxByTickets;
   if (
     effectiveCostPrev.gt(Decimal.dZero) &&
     def.produces !== "base" &&
     prevGenQuantity
   ) {
-    maxByPrev = prevGenQuantity.div(effectiveCostPrev).floor();
+    const maxByPrev = prevGenQuantity.div(effectiveCostPrev).floor();
+    if (maxByPrev.lt(maxAffordable)) maxAffordable = maxByPrev;
   }
-  let maxAffordable = maxByBase;
-  if (maxByTickets.lt(maxAffordable)) maxAffordable = maxByTickets;
-  if (maxByPrev.lt(maxAffordable)) maxAffordable = maxByPrev;
+  return maxAffordable;
+}
+
+export function getBuyAmount(
+  mode: BuyMode,
+  maxAffordable: Decimal,
+  quantity?: Decimal,
+  nextGenCost?: Decimal | null,
+): Decimal {
+  if (mode === "1x") return Decimal.dOne;
+  if (mode === "marco") {
+    if (quantity == null) return maxAffordable.gte(Decimal.dOne) ? Decimal.dOne : Decimal.dZero;
+    const nextMarco = getNextMilestoneFromQuantity(quantity);
+    const toBuyDecimal = nextMarco.sub(quantity).floor();
+    if (toBuyDecimal.lt(Decimal.dZero)) return maxAffordable.gte(Decimal.dOne) ? Decimal.dOne : Decimal.dZero;
+    const toBuy = Decimal.min(toBuyDecimal, maxAffordable).floor();
+    if (toBuy.lt(Decimal.dOne) && maxAffordable.gte(Decimal.dOne)) return Decimal.dOne;
+    return toBuy.lt(Decimal.dOne) ? Decimal.dZero : toBuy;
+  }
+  if (mode === "proximo") {
+    if (quantity == null || nextGenCost == null) return maxAffordable.gte(Decimal.dOne) ? Decimal.dOne : Decimal.dZero;
+    const needed = nextGenCost.sub(quantity).ceil();
+    if (needed.lte(Decimal.dZero)) return Decimal.dZero;
+    const toBuy = Decimal.min(needed, maxAffordable).floor();
+    return toBuy.lt(Decimal.dOne) ? Decimal.dZero : toBuy;
+  }
+  const pct =
+    mode === "1%" ? 0.01 : mode === "10%" ? 0.1 : mode === "50%" ? 0.5 : 1;
+  const toBuyDecimal = maxAffordable.mul(pct).floor();
+  if (toBuyDecimal.lt(Decimal.dOne) && Decimal.gte(maxAffordable, Decimal.dOne)) return Decimal.dOne;
+  return toBuyDecimal.lt(Decimal.dOne) ? Decimal.dZero : toBuyDecimal;
+}
+
+/** Estado atual: quantidade e se pode comprar (para clique seguro / hold). */
+export function computeGeneratorPurchase(
+  state: GameState,
+  id: GeneratorId,
+  buyMode: BuyMode
+): { amount: Decimal; canPurchase: boolean } {
+  const def = GENERATOR_DEFS[id];
+  const gen = state.generators.find((g) => g.id === id);
+  if (!gen) return { amount: Decimal.dZero, canPurchase: false };
+
+  const genLine = parseGeneratorId(id).line;
+  const lineHalf = state.upgradeLineCostHalfRanks[genLine] ?? 0;
+  const effectiveCost = getEffectiveGeneratorCost(
+    def.cost,
+    state.upgradeGeneratorCostHalfRank,
+    lineHalf,
+  );
+  const effectiveCostPrev = getEffectiveGeneratorCost(
+    def.costPreviousGenerator,
+    state.upgradeGeneratorCostHalfRank,
+    lineHalf,
+  );
+  const lineResource = state.lineResources[genLine] ?? Decimal.dZero;
+  const ticketCurrency = state.ticketCurrency;
+  const prevGenQuantity =
+    def.produces !== "base"
+      ? state.generators.find((g) => g.id === def.produces)?.quantity
+      : undefined;
+
+  const ticketCostPerUnit = parseGeneratorId(id).line;
+  const maxAffordable = getMaxAffordableForGenerator(state, id);
 
   const hasEnoughPrev =
     effectiveCostPrev.lte(Decimal.dZero) ||
@@ -143,7 +167,7 @@ export function computeGeneratorPurchase(
     amountNeededForProximo == null || amountNeededForProximo.lte(Decimal.dZero) || maxAffordable.gte(amountNeededForProximo);
   const canPurchase =
     canBuy &&
-    buyAmount >= 1 &&
+    buyAmount.gte(Decimal.dOne) &&
     (buyMode !== "marco" || canReachMarco) &&
     (buyMode !== "proximo" || canReachProximo);
 

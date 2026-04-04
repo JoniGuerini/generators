@@ -7,6 +7,7 @@ import { useGameSelector } from "@/store/useGameStore";
 import { isLineUnlocked } from "@/store/gameState";
 import { LINE_COUNT } from "@/engine/constants";
 import { getMaxAffordableTrades } from "@/engine/upgrades";
+import { formatNumber } from "@/utils/format";
 
 interface BottomMenuProps {
   currentView: MainView;
@@ -17,7 +18,6 @@ interface BottomMenuProps {
 
 export function BottomMenu({ currentView, onNavigate, options, dispatch }: BottomMenuProps) {
   const t = useT();
-  const isSubPage = currentView !== "game";
 
   const totalPendingTrades = useGameSelector((state) => {
     let total = 0;
@@ -36,7 +36,7 @@ export function BottomMenu({ currentView, onNavigate, options, dispatch }: Botto
       <div className="flex-1" />
 
       <div className="flex items-center justify-center gap-3">
-        {isSubPage ? (
+        {currentView === "docs" && (
           <button
             type="button"
             onClick={() => onNavigate("game")}
@@ -44,31 +44,38 @@ export function BottomMenu({ currentView, onNavigate, options, dispatch }: Botto
           >
             {t.footer.back}
           </button>
-        ) : (
-          <>
-            <div className="relative">
-              {totalPendingTrades > 0 && (
-                <div className="absolute -right-1.5 -top-1.5 z-10 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1">
-                  <span className="text-[10px] font-bold tabular-nums text-white">{totalPendingTrades}</span>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => onNavigate("trades")}
-                className="btn-3d btn-3d--zinc flex h-[40px] w-[120px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
-              >
-                {t.footer.trades}
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigate("upgrades")}
-              className="btn-3d btn-3d--zinc flex h-[40px] w-[120px] items-center justify-center rounded-md border border-zinc-600 bg-zinc-700 px-4 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
-            >
-              {t.footer.upgrades}
-            </button>
-          </>
         )}
+        <div className="relative">
+          {totalPendingTrades > 0 && currentView !== "trades" && (
+            <div className="absolute -right-1.5 -top-1.5 z-10 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1">
+              <span className="text-[10px] font-bold tabular-nums text-white">
+                {formatNumber(Decimal.fromNumber(totalPendingTrades))}
+              </span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onNavigate(currentView === "trades" ? "game" : "trades")}
+            className={`btn-3d flex h-[40px] w-[120px] items-center justify-center rounded-md px-4 text-sm font-medium ${
+              currentView === "trades"
+                ? "btn-3d--violet bg-violet-600 text-white hover:bg-violet-500"
+                : "btn-3d--zinc border border-zinc-600 bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
+            }`}
+          >
+            {currentView === "trades" ? t.footer.back : t.footer.trades}
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => onNavigate(currentView === "upgrades" ? "game" : "upgrades")}
+          className={`btn-3d flex h-[40px] w-[120px] items-center justify-center rounded-md px-4 text-sm font-medium ${
+            currentView === "upgrades"
+              ? "btn-3d--violet bg-violet-600 text-white hover:bg-violet-500"
+              : "btn-3d--zinc border border-zinc-600 bg-zinc-700 text-zinc-200 hover:bg-zinc-600"
+          }`}
+        >
+          {currentView === "upgrades" ? t.footer.back : t.footer.upgrades}
+        </button>
 
         <SettingsMenu
           options={options}
@@ -79,7 +86,7 @@ export function BottomMenu({ currentView, onNavigate, options, dispatch }: Botto
       </div>
 
       <div className="flex-1 flex justify-end">
-        <BuyModeSelect />
+        <BuyModeSelect variant={currentView === "upgrades" ? "upgrades" : "generators"} />
       </div>
     </footer>
   );

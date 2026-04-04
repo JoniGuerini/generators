@@ -1,4 +1,5 @@
 import { useCallback, useContext, useRef } from "react";
+import Decimal from "break_eternity.js";
 import { StoreContext, useGameDispatch } from "@/store/useGameStore";
 import { useBuyMode } from "@/contexts/BuyModeContext";
 import type { GeneratorId } from "@/engine/constants";
@@ -38,7 +39,7 @@ export function useHoldToBuyGenerator(id: GeneratorId) {
       id,
       buyMode
     );
-    if (!canPurchase || amount < 1) {
+    if (!canPurchase || amount.lt(Decimal.dOne)) {
       stopRepeat();
       return;
     }

@@ -46,6 +46,9 @@ export const ptBR = {
     marco: "Marco",
     proximo: "Próximo",
   },
+  upgradeBuyMode: {
+    ariaLabel: "Quantidade de melhorias por clique",
+  },
   generator: {
     lockedTitle: "Gerador bloqueado — compre para desbloquear",
     clickToProduce: "Clique para produzir manualmente",

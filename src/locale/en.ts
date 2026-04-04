@@ -48,6 +48,9 @@ export const en: Translations = {
     marco: "Milestone",
     proximo: "Next",
   },
+  upgradeBuyMode: {
+    ariaLabel: "Upgrades per click",
+  },
   generator: {
     lockedTitle: "Locked generator — buy to unlock",
     clickToProduce: "Click to produce manually",

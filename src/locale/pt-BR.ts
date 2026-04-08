@@ -69,6 +69,7 @@ export const ptBR = {
   generatorList: {
     claimAll: (points: string) => `Resgatar ${points} pontos de marcos`,
     noPending: "Nenhum marco pendente",
+    unlockLine: "Desbloquear linha",
   },
   offline: {
     title: "Bem-vindo de volta!",
@@ -106,7 +107,7 @@ export const ptBR = {
     lineLockedDesc: "Desbloqueie esta linha para acessar as melhorias",
     genLockedDesc: "Desbloqueie este gerador para acessar as melhorias",
     tradeLineLockedDesc: "Desbloqueie esta linha para realizar trocas",
-    requiresGen: (gen: number, line: number) => `Requer Gerador ${gen} da Linha ${line}`,
+    requiresLineResource: (line: number, amount: string) => `Requer ${amount} de recurso produzido na Linha ${line}`,
   },
   docs: {
     title: "Documentação do Jogo",
@@ -117,7 +118,7 @@ export const ptBR = {
     tabLines: "Linhas",
     basicsTitle: "O Básico",
     basicsText:
-      'O jogo possui <strong>10 linhas de produção</strong>, cada uma com <strong>10 geradores</strong>, totalizando 100 geradores. Cada linha possui sua própria cor e produz seu próprio recurso. O objetivo é expandir todas as linhas, comprando geradores cada vez mais poderosos. Seu <strong>Nível</strong> (exibido no header) é a soma de todos os geradores que você possui em produção (máximo 100).',
+      'O jogo possui <strong>20 linhas de produção</strong>, cada uma com <strong>10 geradores</strong>, totalizando 200 geradores. Cada linha possui sua própria cor e produz seu próprio recurso. O objetivo é expandir todas as linhas, comprando geradores cada vez mais poderosos. Seu <strong>Nível</strong> (exibido no header) é a soma de todos os geradores que você possui em produção (máximo 200).',
     currenciesTitle: "As Moedas",
     baseResourceTitle: "● Recurso (por linha)",
     baseResourceDesc:
@@ -126,7 +127,7 @@ export const ptBR = {
     baseResourceInit: "<strong>Recurso Total (Σ):</strong> O header exibe a soma de recursos de todas as linhas.",
     ticketsTitle: "▲ Tickets",
     ticketsDesc:
-      "Moeda universal usada para comprar geradores em todas as linhas. O custo em tickets escala com a linha: <strong>Linha 1 = 1 ticket</strong>, Linha 2 = 2 tickets, até Linha 10 = 10 tickets por gerador.",
+      "Moeda universal usada para comprar geradores em todas as linhas. O custo em tickets escala com a linha: <strong>Linha 1 = 1 ticket</strong>, Linha 2 = 2 tickets, até Linha 20 = 20 tickets por gerador.",
     ticketsHow:
       "<strong>Como Obter:</strong> Ao possuir pelo menos 1 gerador, você gera 1 Ticket por segundo automaticamente.",
     ticketsIncrease:
@@ -183,25 +184,27 @@ export const ptBR = {
       "Global. Dobra a recompensa de ◆ ao coletar marcos. Custo: 2, 8, 32, 128… ◆ (quadruplica por ranque).",
     upgTradeTitle: "Trocas (menu Trocas)",
     upgTradeDesc:
-      "10 trocas independentes, uma por linha. Sacrifique recurso da linha por um ganho permanente de ▲/s. O custo cresce a cada troca (500, 5k, 5M, 5B…). Não consome ◆.",
+      "20 trocas independentes, uma por linha. Sacrifique recurso da linha por um ganho permanente de ▲/s. O custo cresce a cada troca (500, 5k, 5M, 5B…). Não consome ◆.",
     linesTitle: "Linhas de Produção",
     linesIntro:
-      "O jogo possui <strong>10 linhas de produção</strong>, cada uma com sua <strong>cor</strong>, <strong>recurso exclusivo</strong> e características únicas. Linhas superiores são mais lentas porém muito mais produtivas por ciclo.",
+      "O jogo possui <strong>20 linhas de produção</strong>, cada uma com sua <strong>cor</strong>, <strong>recurso exclusivo</strong> e características únicas. Linhas superiores são mais lentas porém muito mais produtivas por ciclo.",
     linesScaling: "Escalonamento entre linhas",
     linesScalingCycle: "Tempo de ciclo",
-    linesScalingCycleDesc: "Cada linha seguinte tem o <strong>dobro</strong> do tempo de ciclo da anterior. Linha 1 começa com 2s no Gen 1, Linha 2 com 4s, Linha 10 com ~17 min.",
+    linesScalingCycleDesc: "Cada linha seguinte tem o <strong>dobro</strong> do tempo de ciclo da anterior. Linha 1 começa com 2s no Gen 1, Linha 2 com 4s, Linha 20 com ~291 h.",
     linesScalingProd: "Produção por ciclo",
-    linesScalingProdDesc: "Cada linha seguinte produz o <strong>triplo</strong> por ciclo. Linha 1 produz 3/ciclo no Gen 1, Linha 2 produz 9, Linha 10 produz 59.049.",
+    linesScalingProdDesc: "Cada linha seguinte produz o <strong>triplo</strong> por ciclo. Linha 1 produz 3/ciclo no Gen 1, Linha 2 produz 9, Linha 20 produz ~1,16 bilhão.",
     linesScalingTickets: "Custo em tickets",
-    linesScalingTicketsDesc: "Linha N consome <strong>N tickets</strong> por gerador comprado. Linha 1 = 1▲, Linha 5 = 5▲, Linha 10 = 10▲.",
+    linesScalingTicketsDesc: "Linha N consome <strong>N tickets</strong> por gerador comprado. Linha 1 = 1▲, Linha 5 = 5▲, Linha 20 = 20▲.",
     linesScalingResource: "Recurso exclusivo",
     linesScalingResourceDesc: "Cada linha produz e consome seu próprio recurso. Geradores da linha vermelha usam recurso vermelho, geradores da linha azul usam recurso azul, e assim por diante.",
     linesUnlockTitle: "Desbloqueio de linhas",
-    linesUnlock: "A <strong>Linha 1</strong> começa desbloqueada. Para desbloquear a <strong>Linha N</strong>, é preciso possuir pelo menos <strong>1 unidade do Gerador N da Linha N-1</strong>.",
-    linesUnlockExample: "Ex: Para desbloquear a Linha 3, você precisa de 1 Gerador 3 da Linha 2. Para desbloquear a Linha 6, precisa de 1 Gerador 6 da Linha 5.",
+    linesUnlock: "A <strong>Linha 1</strong> começa desbloqueada. Para desbloquear a <strong>Linha N</strong>, é preciso ter <strong>produzido</strong> uma certa quantidade total de recurso na <strong>Linha N-1</strong>.",
+    linesUnlockExample: "Ex: Para desbloquear a Linha 2, produza 1 T (1e12) de recurso na Linha 1. Para a Linha 3, produza 1 Qa (1e15) na Linha 2. Cada próxima linha exige 1000x mais.",
     lineNames: [
       "Vermelha", "Azul", "Verde", "Âmbar", "Violeta",
       "Ciano", "Laranja", "Rosa", "Índigo", "Lima",
+      "Turquesa", "Rosada", "Fúcsia", "Celeste", "Esmeralda",
+      "Amarela", "Ardósia", "Pedra", "Púrpura", "Carmesim",
     ] as unknown as string,
     lineLabel: "Linha",
     lineTickets: "tickets/gerador",

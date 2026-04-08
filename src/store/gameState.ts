@@ -1,5 +1,5 @@
 import Decimal from "break_eternity.js";
-import { GENERATOR_IDS, getLineGeneratorIds, parseGeneratorId, makeGeneratorId, LINE_COUNT, type GeneratorId } from "@/engine/constants";
+import { GENERATOR_IDS, getLineGeneratorIds, parseGeneratorId, LINE_COUNT, type GeneratorId } from "@/engine/constants";
 
 export interface GeneratorState {
   id: GeneratorId;
@@ -34,6 +34,7 @@ export interface GameState {
   upgradeGlobalProductionDoublerRank: number;
   upgradeLineProductionDoublerRanks: Record<number, number>;
   upgradeLineCostHalfRanks: Record<number, number>;
+  unlockedLines: Record<number, boolean>;
   generators: GeneratorState[];
   activeLine: number;
   lineStats: Record<number, LineStats>;
@@ -71,22 +72,29 @@ export function getTotalTicketTrades(state: GameState): number {
 }
 
 /**
- * Line N requires Generator N of Line N-1 to be owned.
- * E.g. Line 2 needs l1g2, Line 3 needs l2g3, Line 10 needs l9g10.
+ * To unlock Line N (N >= 2), the player must have produced a certain
+ * total amount of resource from Line N-1.
+ * Line 2 = 1e12 (1 T), Line 3 = 1e15 (1 Qa), each next line = 1000x more.
+ * Formula: threshold = 10^(12 + (N-2)*3)
  */
-export function getLineUnlockRequirement(line: number): { genId: GeneratorId; line: number; gen: number } | null {
+export function getLineUnlockRequirement(line: number): { prevLine: number; threshold: Decimal } | null {
   if (line <= 1) return null;
   const prevLine = line - 1;
-  const genNum = line;
-  return { genId: makeGeneratorId(prevLine, genNum), line: prevLine, gen: genNum };
+  const exponent = 12 + (line - 2) * 3;
+  return { prevLine, threshold: Decimal.pow(10, exponent) };
 }
 
 export function isLineUnlocked(state: GameState, line: number): boolean {
   if (line <= 1) return true;
+  return state.unlockedLines[line] === true;
+}
+
+export function canUnlockLine(state: GameState, line: number): boolean {
+  if (line <= 1 || isLineUnlocked(state, line)) return false;
   const req = getLineUnlockRequirement(line);
-  if (!req) return true;
-  const gen = state.generators.find(g => g.id === req.genId);
-  return gen?.everOwned === true;
+  if (!req) return false;
+  const resource = state.lineResources[req.prevLine] ?? Decimal.dZero;
+  return resource.gte(req.threshold);
 }
 
 export function getLineResource(state: GameState, line: number): Decimal {
@@ -131,6 +139,7 @@ export function getInitialState(): GameState {
     upgradeLineCostHalfRanks: Object.fromEntries(
       Array.from({ length: LINE_COUNT }, (_, i) => [i + 1, 0])
     ),
+    unlockedLines: { 1: true },
     generators: GENERATOR_IDS.map((id) => {
       const gen = initialGeneratorState(id);
       if (parseGeneratorId(id).gen === 1) return { ...gen, everOwned: true };

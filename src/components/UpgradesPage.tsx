@@ -180,7 +180,7 @@ export function UpgradesPage() {
   const store = useContext(StoreContext);
   const { upgradeBuyMode } = useBuyMode();
   const t = useT();
-  const [tab, setTab] = useState<UpgradesTab>("geral");
+  const [tab, setTab] = useState<UpgradesTab>("geradores");
   const [upgradeLine, setUpgradeLine] = useState(1);
 
   const bulk = useCallback(
@@ -300,8 +300,8 @@ export function UpgradesPage() {
   const nextTradeValue = getTicketTradeValue(upgradeTicketTradeDoublerRank + 1);
 
   const tabs: { key: UpgradesTab; label: string }[] = [
-    { key: "geral", label: t.upgradesPage.general },
     { key: "geradores", label: t.upgradesPage.generators },
+    { key: "geral", label: t.upgradesPage.general },
     { key: "tickets", label: t.upgradesPage.tickets },
   ];
 
@@ -491,7 +491,7 @@ export function UpgradesPage() {
             <div className="flex flex-col items-center justify-center gap-3 py-16">
               <p className="text-sm text-zinc-400">{t.upgradesPage.lineLockedDesc}</p>
               {req && (
-                <p className="text-xs text-zinc-500">{t.upgradesPage.requiresGen(req.gen, req.line)}</p>
+                <p className="text-xs text-zinc-500">{t.upgradesPage.requiresLineResource(req.prevLine, formatNumber(req.threshold))}</p>
               )}
             </div>
           );

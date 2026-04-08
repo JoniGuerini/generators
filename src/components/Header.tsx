@@ -4,6 +4,7 @@ import { useFPS } from "@/hooks/useFPS";
 import { formatNumber } from "@/utils/format";
 import { getTicketsPerSecond } from "@/engine/upgrades";
 import { getTotalTicketTrades } from "@/store/gameState";
+import { LINE_COUNT, GENERATORS_PER_LINE } from "@/engine/constants";
 import { useT } from "@/locale";
 
 export function Header() {
@@ -37,7 +38,7 @@ export function Header() {
             {playerLevel}
           </span>
           <span className="text-[10px] font-semibold tabular-nums text-zinc-500">
-            /100
+            /{LINE_COUNT * GENERATORS_PER_LINE}
           </span>
         </div>
       </div>

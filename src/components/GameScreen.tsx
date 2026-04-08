@@ -89,7 +89,10 @@ export function GameScreen() {
       const s = stateRef.current;
       if (!s) return;
       const now = Date.now();
-      runOfflineCheck(s, now, dispatch, setOfflineGains, true);
+      const elapsed = now - s.lastUpdateTimestamp;
+      if (elapsed < MIN_OFFLINE_MS) return;
+      const { newState } = simulateOfflineProgress(s, elapsed, now);
+      dispatch({ type: "REPLACE_STATE", state: newState });
     }
     window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVisibilityChange);

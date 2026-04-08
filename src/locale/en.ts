@@ -71,6 +71,7 @@ export const en: Translations = {
   generatorList: {
     claimAll: (points: string) => `Claim ${points} milestone points`,
     noPending: "No pending milestones",
+    unlockLine: "Unlock line",
   },
   offline: {
     title: "Welcome back!",
@@ -108,7 +109,7 @@ export const en: Translations = {
     lineLockedDesc: "Unlock this line to access upgrades",
     genLockedDesc: "Unlock this generator to access upgrades",
     tradeLineLockedDesc: "Unlock this line to perform trades",
-    requiresGen: (gen: number, line: number) => `Requires Generator ${gen} from Line ${line}`,
+    requiresLineResource: (line: number, amount: string) => `Requires ${amount} resource produced in Line ${line}`,
   },
   docs: {
     title: "Game Documentation",
@@ -119,7 +120,7 @@ export const en: Translations = {
     tabLines: "Lines",
     basicsTitle: "The Basics",
     basicsText:
-      'The game has <strong>10 production lines</strong>, each with <strong>10 generators</strong>, totaling 100 generators. Each line has its own color and produces its own resource. The goal is to expand all lines by buying increasingly powerful generators. Your <strong>Level</strong> (shown in the header) is the total number of generators in production (max 100).',
+      'The game has <strong>20 production lines</strong>, each with <strong>10 generators</strong>, totaling 200 generators. Each line has its own color and produces its own resource. The goal is to expand all lines by buying increasingly powerful generators. Your <strong>Level</strong> (shown in the header) is the total number of generators in production (max 200).',
     currenciesTitle: "Currencies",
     baseResourceTitle: "● Resource (per line)",
     baseResourceDesc:
@@ -128,7 +129,7 @@ export const en: Translations = {
     baseResourceInit: "<strong>Total Resource (Σ):</strong> The header displays the sum of resources from all lines.",
     ticketsTitle: "▲ Tickets",
     ticketsDesc:
-      "Universal currency used to buy generators across all lines. Ticket cost scales with line: <strong>Line 1 = 1 ticket</strong>, Line 2 = 2 tickets, up to Line 10 = 10 tickets per generator.",
+      "Universal currency used to buy generators across all lines. Ticket cost scales with line: <strong>Line 1 = 1 ticket</strong>, Line 2 = 2 tickets, up to Line 20 = 20 tickets per generator.",
     ticketsHow:
       "<strong>How to Obtain:</strong> Once you own at least 1 generator, you automatically generate 1 Ticket per second.",
     ticketsIncrease:
@@ -185,25 +186,27 @@ export const en: Translations = {
       "Global. Doubles ◆ reward from collecting milestones. Cost: 2, 8, 32, 128… ◆ (quadruples each rank).",
     upgTradeTitle: "Trades (Trades menu)",
     upgTradeDesc:
-      "10 independent trades, one per line. Sacrifice line resource for a permanent ▲/s gain. Cost increases per trade (500, 5k, 5M, 5B…). Does not consume ◆.",
+      "20 independent trades, one per line. Sacrifice line resource for a permanent ▲/s gain. Cost increases per trade (500, 5k, 5M, 5B…). Does not consume ◆.",
     linesTitle: "Production Lines",
     linesIntro:
-      "The game has <strong>10 production lines</strong>, each with its own <strong>color</strong>, <strong>exclusive resource</strong> and unique characteristics. Higher lines are slower but much more productive per cycle.",
+      "The game has <strong>20 production lines</strong>, each with its own <strong>color</strong>, <strong>exclusive resource</strong> and unique characteristics. Higher lines are slower but much more productive per cycle.",
     linesScaling: "Scaling between lines",
     linesScalingCycle: "Cycle time",
-    linesScalingCycleDesc: "Each subsequent line has <strong>double</strong> the cycle time. Line 1 starts at 2s for Gen 1, Line 2 at 4s, Line 10 at ~17 min.",
+    linesScalingCycleDesc: "Each subsequent line has <strong>double</strong> the cycle time. Line 1 starts at 2s for Gen 1, Line 2 at 4s, Line 20 at ~291 h.",
     linesScalingProd: "Production per cycle",
-    linesScalingProdDesc: "Each subsequent line produces <strong>triple</strong> per cycle. Line 1 produces 3/cycle for Gen 1, Line 2 produces 9, Line 10 produces 59,049.",
+    linesScalingProdDesc: "Each subsequent line produces <strong>triple</strong> per cycle. Line 1 produces 3/cycle for Gen 1, Line 2 produces 9, Line 20 produces ~1.16 billion.",
     linesScalingTickets: "Ticket cost",
-    linesScalingTicketsDesc: "Line N consumes <strong>N tickets</strong> per generator purchased. Line 1 = 1▲, Line 5 = 5▲, Line 10 = 10▲.",
+    linesScalingTicketsDesc: "Line N consumes <strong>N tickets</strong> per generator purchased. Line 1 = 1▲, Line 5 = 5▲, Line 20 = 20▲.",
     linesScalingResource: "Exclusive resource",
     linesScalingResourceDesc: "Each line produces and consumes its own resource. Red line generators use red resource, blue line generators use blue resource, and so on.",
     linesUnlockTitle: "Unlocking lines",
-    linesUnlock: "<strong>Line 1</strong> starts unlocked. To unlock <strong>Line N</strong>, you need at least <strong>1 unit of Generator N from Line N-1</strong>.",
-    linesUnlockExample: "E.g.: To unlock Line 3, you need 1 Generator 3 from Line 2. To unlock Line 6, you need 1 Generator 6 from Line 5.",
+    linesUnlock: "<strong>Line 1</strong> starts unlocked. To unlock <strong>Line N</strong>, you must have <strong>produced</strong> a certain total amount of resource in <strong>Line N-1</strong>.",
+    linesUnlockExample: "E.g.: To unlock Line 2, produce 1 T (1e12) of resource in Line 1. For Line 3, produce 1 Qa (1e15) in Line 2. Each next line requires 1000x more.",
     lineNames: [
       "Red", "Blue", "Green", "Amber", "Violet",
       "Cyan", "Orange", "Pink", "Indigo", "Lime",
+      "Teal", "Rose", "Fuchsia", "Sky", "Emerald",
+      "Yellow", "Slate", "Stone", "Purple", "Crimson",
     ] as unknown as string,
     lineLabel: "Line",
     lineTickets: "tickets/generator",

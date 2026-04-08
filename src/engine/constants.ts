@@ -1,6 +1,6 @@
 import Decimal from "break_eternity.js";
 
-export const LINE_COUNT = 10;
+export const LINE_COUNT = 20;
 export const GENERATORS_PER_LINE = 10;
 
 export type GeneratorId = string;
@@ -112,6 +112,8 @@ export function getLineGeneratorIds(line: number): GeneratorId[] {
 export const LINE_COLORS = [
   "red", "blue", "green", "amber", "violet",
   "cyan", "orange", "pink", "indigo", "lime",
+  "teal", "rose", "fuchsia", "sky", "emerald",
+  "yellow", "slate", "stone", "purple2", "red2",
 ] as const;
 export type LineColor = (typeof LINE_COLORS)[number];
 
@@ -130,4 +132,14 @@ export const LINE_COLOR_CLASSES: Record<LineColor, { bg: string; bgDark: string;
   pink:   { bg: "bg-pink-600",   bgDark: "bg-pink-900",   btn3d: "btn-3d--pink",   text: "text-pink-400",   textVivid: "text-pink-600",   textDark: "text-pink-700" },
   indigo: { bg: "bg-indigo-600", bgDark: "bg-indigo-900", btn3d: "btn-3d--indigo", text: "text-indigo-400", textVivid: "text-indigo-600", textDark: "text-indigo-700" },
   lime:   { bg: "bg-lime-600",   bgDark: "bg-lime-900",   btn3d: "btn-3d--lime",   text: "text-lime-400",   textVivid: "text-lime-600",   textDark: "text-lime-700" },
+  teal:    { bg: "bg-teal-600",    bgDark: "bg-teal-900",    btn3d: "btn-3d--teal",    text: "text-teal-400",    textVivid: "text-teal-600",    textDark: "text-teal-700" },
+  rose:    { bg: "bg-rose-600",    bgDark: "bg-rose-900",    btn3d: "btn-3d--rose",    text: "text-rose-400",    textVivid: "text-rose-600",    textDark: "text-rose-700" },
+  fuchsia: { bg: "bg-fuchsia-600", bgDark: "bg-fuchsia-900", btn3d: "btn-3d--fuchsia", text: "text-fuchsia-400", textVivid: "text-fuchsia-600", textDark: "text-fuchsia-700" },
+  sky:     { bg: "bg-sky-600",     bgDark: "bg-sky-900",     btn3d: "btn-3d--sky",     text: "text-sky-400",     textVivid: "text-sky-600",     textDark: "text-sky-700" },
+  emerald: { bg: "bg-emerald-600", bgDark: "bg-emerald-900", btn3d: "btn-3d--emerald", text: "text-emerald-400", textVivid: "text-emerald-600", textDark: "text-emerald-700" },
+  yellow:  { bg: "bg-yellow-500",  bgDark: "bg-yellow-800",  btn3d: "btn-3d--yellow",  text: "text-yellow-400",  textVivid: "text-yellow-500",  textDark: "text-yellow-700" },
+  slate:   { bg: "bg-slate-500",   bgDark: "bg-slate-800",   btn3d: "btn-3d--slate",   text: "text-slate-400",   textVivid: "text-slate-500",   textDark: "text-slate-700" },
+  stone:   { bg: "bg-stone-500",   bgDark: "bg-stone-800",   btn3d: "btn-3d--stone",   text: "text-stone-400",   textVivid: "text-stone-500",   textDark: "text-stone-700" },
+  purple2: { bg: "bg-purple-500",  bgDark: "bg-purple-800",  btn3d: "btn-3d--purple-dark", text: "text-purple-400", textVivid: "text-purple-500", textDark: "text-purple-700" },
+  red2:    { bg: "bg-red-500",     bgDark: "bg-red-800",     btn3d: "btn-3d--red2",    text: "text-red-300",     textVivid: "text-red-500",     textDark: "text-red-600" },
 };

@@ -212,6 +212,60 @@ button:focus-visible {
     0 3px 0 0 #000,
     0 4px 6px 0 rgba(0,0,0,0.3);
 }
+.btn-3d--teal {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #115e59,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--rose {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #9f1239,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--fuchsia {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #86198f,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--sky {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #075985,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--emerald {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #065f46,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--yellow {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.2),
+    0 3px 0 0 #a16207,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--slate {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.1),
+    0 3px 0 0 #334155,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--stone {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.1),
+    0 3px 0 0 #44403c,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
+.btn-3d--red2 {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255,255,255,0.15),
+    0 3px 0 0 #b91c1c,
+    0 4px 6px 0 rgba(0,0,0,0.3);
+}
 
 /* Card de marcos: efeito de pressão na barra interna sem mover o tooltip */
 .milestone-bar {

@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
 import Decimal from "break_eternity.js";
 import type { GameState } from "@/store/gameState";
-import { getInitialState } from "@/store/gameState";
+import { getInitialState, getLineUnlockRequirement } from "@/store/gameState";
 import { useRawGameStateForPersist } from "@/store/useGameStore";
 import { advanceMilestoneTargetIndex } from "@/utils/milestones";
 import { loadSharedSettings, saveSharedSettings } from "@/utils/sharedSettings";
-import { makeGeneratorId } from "@/engine/constants";
+import { makeGeneratorId, LINE_COUNT } from "@/engine/constants";
 
 const SAVE_KEY = "idle-game-save";
 const SAVE_VERSION = 9;
@@ -26,6 +26,7 @@ interface SavedState {
   upgradeGlobalProductionDoublerRank?: number;
   upgradeLineProductionDoublerRanks?: Record<string, number>;
   upgradeLineCostHalfRanks?: Record<string, number>;
+  unlockedLines?: Record<string, boolean>;
   activeLine?: number;
   lineStats?: Record<string, { baseResourceProduced: string; milestoneCurrencyEarned: string }>;
   generators: {
@@ -69,6 +70,7 @@ function serialize(state: GameState): string {
     upgradeGlobalProductionDoublerRank: state.upgradeGlobalProductionDoublerRank,
     upgradeLineProductionDoublerRanks: state.upgradeLineProductionDoublerRanks,
     upgradeLineCostHalfRanks: state.upgradeLineCostHalfRanks,
+    unlockedLines: state.unlockedLines,
     activeLine: state.activeLine,
     lineStats: Object.fromEntries(
       Object.entries(state.lineStats).map(([k, v]) => [k, {
@@ -206,6 +208,23 @@ function deserialize(raw: string): GameState | null {
           return ranks;
         }
         return { ...initial.upgradeLineCostHalfRanks };
+      })(),
+      unlockedLines: (() => {
+        if (saved.unlockedLines && typeof saved.unlockedLines === "object") {
+          const lines: Record<number, boolean> = { 1: true };
+          for (const [k, v] of Object.entries(saved.unlockedLines)) {
+            if (v) lines[Number(k)] = true;
+          }
+          return lines;
+        }
+        const migrated: Record<number, boolean> = { 1: true };
+        for (let ln = 2; ln <= LINE_COUNT; ln++) {
+          const req = getLineUnlockRequirement(ln);
+          if (!req) continue;
+          const ls = lineStats[req.prevLine];
+          if (ls && ls.baseResourceProduced.gte(req.threshold)) migrated[ln] = true;
+        }
+        return migrated;
       })(),
       activeLine: Number(saved.activeLine) || 1,
       lineStats,

@@ -30,13 +30,16 @@ export function TradesPage() {
   const ticketsPerSec = getTicketsPerSecond(totalTrades, upgradeTicketMultiplierRank, upgradeTicketTradeDoublerRank);
 
   let totalPendingTrades = 0;
+  let linesWithTrades = 0;
   for (let ln = 1; ln <= LINE_COUNT; ln++) {
     if (!unlockedLines[ln - 1]) continue;
     const count = lineTicketTradeCounts[ln] ?? 0;
     const resource = lineResources[ln] ?? Decimal.dZero;
     const { trades } = getMaxAffordableTrades(count, resource);
     totalPendingTrades += trades;
+    if (trades > 0) linesWithTrades++;
   }
+  const canTradeAll = linesWithTrades >= 2;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -54,7 +57,7 @@ export function TradesPage() {
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dashed border-zinc-500 bg-zinc-800/60 text-sm font-bold text-zinc-400">{ln}</div>
                   <div className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-dashed border-zinc-500 bg-zinc-900/40 px-3 py-3">
                     <span className="text-xs text-zinc-400">
-                      {req ? t.upgradesPage.requiresGen(req.gen, req.line) : t.upgradesPage.tradeLineLockedDesc}
+                      {req ? t.upgradesPage.requiresLineResource(req.prevLine, formatNumber(req.threshold)) : t.upgradesPage.tradeLineLockedDesc}
                     </span>
                   </div>
                 </div>
@@ -121,14 +124,14 @@ export function TradesPage() {
         <button
           type="button"
           onClick={() => dispatch({ type: "TRADE_ALL_LINES" })}
-          disabled={totalPendingTrades <= 0}
+          disabled={!canTradeAll}
           className={`mt-3 w-full rounded-lg py-2.5 text-sm font-medium ${
-            totalPendingTrades > 0
+            canTradeAll
               ? "btn-3d btn-3d--amber bg-amber-600 text-white hover:bg-amber-500"
               : "btn-3d btn-3d--zinc cursor-default bg-zinc-700 text-zinc-500"
           }`}
         >
-          {totalPendingTrades > 0
+          {canTradeAll
             ? `${t.tradesPage.tradeAll} (+${totalPendingTrades} ▲/s)`
             : t.tradesPage.noTrades}
         </button>

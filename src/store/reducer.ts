@@ -1,7 +1,7 @@
 import Decimal from "break_eternity.js";
 import type { GameState } from "./gameState";
-import { getInitialState, getTotalTicketTrades, isLineUnlocked } from "./gameState";
-import { GENERATOR_DEFS, parseGeneratorId, getUnlockRequirement } from "@/engine/constants";
+import { getInitialState, getTotalTicketTrades, isLineUnlocked, canUnlockLine, getLineUnlockRequirement } from "./gameState";
+import { GENERATOR_DEFS, parseGeneratorId, getUnlockRequirement, LINE_COUNT } from "@/engine/constants";
 import type { GeneratorId } from "@/engine/constants";
 import {
   getCurrentMilestoneCount,
@@ -49,6 +49,7 @@ export type GameAction =
   | { type: "BUY_GLOBAL_PRODUCTION_DOUBLER_UPGRADE" }
   | { type: "BUY_LINE_PRODUCTION_DOUBLER_UPGRADE"; line: number }
   | { type: "BUY_LINE_COST_HALF_UPGRADE"; line: number }
+  | { type: "UNLOCK_LINE"; line: number }
   | { type: "TOGGLE_FPS" }
   | { type: "TOGGLE_SFX" }
   | { type: "SET_SFX_VOLUME"; volume: number }
@@ -440,7 +441,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const newResources = { ...state.lineResources };
       const newCounts = { ...state.lineTicketTradeCounts };
       let anyTrade = false;
-      for (let ln = 1; ln <= 10; ln++) {
+      for (let ln = 1; ln <= LINE_COUNT; ln++) {
         if (!isLineUnlocked(state, ln)) continue;
         const res = newResources[ln] ?? Decimal.dZero;
         const count = newCounts[ln] ?? 0;
@@ -543,6 +544,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         options: { showFPS: false, sfxEnabled: true, sfxVolume: 50, locale: "pt-BR" },
+      };
+    }
+
+    case "UNLOCK_LINE": {
+      const { line } = action;
+      if (!canUnlockLine(state, line)) return state;
+      const req = getLineUnlockRequirement(line);
+      if (!req) return state;
+      const resource = state.lineResources[req.prevLine] ?? Decimal.dZero;
+      return {
+        ...state,
+        lineResources: { ...state.lineResources, [req.prevLine]: resource.sub(req.threshold) },
+        unlockedLines: { ...state.unlockedLines, [line]: true },
       };
     }
 
